@@ -31,11 +31,10 @@ likeSchema.virtual('post', {
   justOne: true
 });
 
-likeSchema.pre('save', async function(next) {
+likeSchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('likes');
   }
-  next();
 });
 
 module.exports = mongoose.model('Like', likeSchema);

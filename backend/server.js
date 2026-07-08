@@ -16,6 +16,9 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const userRoutes = require('./routes/userRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const statsRoutes = require('./routes/statsRoutes');
 const setupSocket = require('./sockets/notification');
 
 const app = express();
@@ -51,6 +54,10 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Health check
 app.get('/', (req, res) => {

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { postAPI, commentAPI } from '../services/api';
+import { postAPI, commentAPI, reportAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { FiHeart, FiMessageCircle, FiEye, FiShare2, FiMapPin, FiSend } from 'react-icons/fi';
+import { FiHeart, FiMessageCircle, FiEye, FiShare2, FiMapPin, FiSend, FiFlag } from 'react-icons/fi';
 
 export default function PostDetailPage() {
   const { id } = useParams();
@@ -15,6 +15,11 @@ export default function PostDetailPage() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Report violation state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState({ type: '', id: null });
+  const [reportReason, setReportReason] = useState('');
 
   useEffect(() => { fetchPost(); }, [id]);
 
@@ -38,6 +43,22 @@ export default function PostDetailPage() {
       setLiked(res.data.data.liked);
       setLikeCount(prev => res.data.data.liked ? prev + 1 : prev - 1);
     } catch (err) { toast.error('Lỗi'); }
+  };
+
+  const handleReport = async () => {
+    if (!reportReason) return toast.error('Vui lòng chọn lý do báo cáo');
+    try {
+      await reportAPI.create({
+        target_type: reportTarget.type,
+        target_id: reportTarget.id,
+        reason: reportReason
+      });
+      toast.success('Báo cáo vi phạm đã được gửi lên hệ thống!');
+      setShowReportModal(false);
+      setReportReason('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gặp lỗi khi gửi báo cáo');
+    }
   };
 
   const handleComment = async (e) => {
@@ -109,6 +130,11 @@ export default function PostDetailPage() {
             <button className="action-btn"><FiMessageCircle /> {comments.length}</button>
             <button className="action-btn"><FiEye /> {post.view_count}</button>
             <button className="action-btn" onClick={handleShare}><FiShare2 /> Chia sẻ</button>
+            {isAuthenticated && post.user_id !== user?.id && (
+              <button className="action-btn" style={{ marginLeft: 'auto', color: '#dc2626' }} onClick={() => { setReportTarget({ type: 'post', id: post.id }); setShowReportModal(true); }}>
+                <FiFlag /> Báo cáo
+              </button>
+            )}
           </div>
 
           {/* Comments */}
@@ -143,6 +169,11 @@ export default function PostDetailPage() {
                     <div className="comment-actions">
                       <span>{timeAgo(c.created_at)}</span>
                       {isAuthenticated && <button onClick={() => { setReplyTo(c.id); }}>Trả lời</button>}
+                      {isAuthenticated && c.user_id !== user?.id && (
+                        <button style={{ color: '#dc2626' }} onClick={() => { setReportTarget({ type: 'comment', id: c.id }); setShowReportModal(true); }}>
+                          🚩 Báo cáo
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -166,6 +197,27 @@ export default function PostDetailPage() {
             ))}
           </div>
         </div>
+
+        {/* Report Modal Popup */}
+        {showReportModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+            <div style={{ background: 'white', borderRadius: 12, padding: 24, width: 380, maxWidth: '90vw', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+              <h3 style={{ marginBottom: 16, fontSize: '1.1rem', fontWeight: 700 }}>🚩 Báo cáo vi phạm</h3>
+              <select className="form-select" style={{ marginBottom: 16 }} value={reportReason} onChange={e => setReportReason(e.target.value)}>
+                <option value="">-- Chọn lý do báo cáo --</option>
+                <option value="spam">Spam / Quảng cáo</option>
+                <option value="inappropriate">Nội dung thô tục / Nhạy cảm</option>
+                <option value="hate_speech">Ngôn từ kích động thù ghét</option>
+                <option value="misinformation">Thông tin sai sự thật</option>
+                <option value="other">Lý do khác</option>
+              </select>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary" onClick={() => setShowReportModal(false)}>Hủy</button>
+                <button className="btn btn-primary" onClick={handleReport}>Gửi báo cáo</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

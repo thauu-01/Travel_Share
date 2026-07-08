@@ -1,11 +1,19 @@
 const router = require('express').Router();
 const place = require('../controllers/PlaceController');
-const { authenticate } = require('../middlewares/auth');
+const admin = require('../controllers/AdminController');
+const { authenticate, requireAdmin } = require('../middlewares/auth');
 const { uploadSingle, handleUploadError } = require('../middlewares/upload');
 
+// Public/User routes
 router.get('/', place.getAll);
 router.get('/provinces', place.getProvinces);
 router.get('/:id', place.getById);
 router.post('/', authenticate, uploadSingle, handleUploadError, place.create);
+
+// Admin place management routes
+router.get('/admin/list', authenticate, requireAdmin, admin.getPlaces);
+router.post('/admin/create', authenticate, requireAdmin, admin.createPlace);
+router.put('/:id', authenticate, requireAdmin, admin.updatePlace);
+router.delete('/:id', authenticate, requireAdmin, admin.deletePlace);
 
 module.exports = router;

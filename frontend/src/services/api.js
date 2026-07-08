@@ -85,4 +85,47 @@ export const recommendationAPI = {
   get: () => API.get('/recommendations'),
 };
 
+export const adminAPI = {
+  getDashboard: () => API.get('/stats/dashboard'),
+  // Users
+  getUsers: (params) => API.get('/users', { params }),
+  banUser: (id) => API.patch(`/users/${id}/ban`),
+  updateUserRole: (id, data) => API.patch(`/users/${id}/role`, data),
+  // Posts
+  getPosts: (params) => API.get('/posts/admin/list', { params }),
+  togglePostVisibility: (id) => API.patch(`/posts/${id}/visibility`),
+  deletePost: (id) => API.delete(`/posts/${id}/admin`),
+  // Comments
+  getComments: (params) => API.get('/comments/admin/all', { params }),
+  deleteComment: (id) => API.delete(`/comments/admin/${id}`),
+  // Places
+  getPlaces: (params) => API.get('/places/admin/list', { params }),
+  createPlace: (data) => API.post('/places/admin/create', data),
+  updatePlace: (id, data) => API.put(`/places/${id}`, data),
+  deletePlace: (id) => API.delete(`/places/${id}`),
+  // Categories
+  getCategories: () => API.get('/categories'),
+  createCategory: (data) => API.post('/categories', data),
+  updateCategory: (id, data) => API.put(`/categories/${id}`, data),
+  deleteCategory: (id) => API.delete(`/categories/${id}`),
+  // Reports
+  getReports: (params) => API.get('/reports', { params }),
+  updateReport: (id, data) => API.patch(`/reports/${id}`, data),
+  // Notifications
+  broadcastNotification: (data) => API.post('/notifications/broadcast', data),
+  // Chats
+  getSupportChats: () => API.get('/chat/admin/threads'),
+  getChatHistory: (userId) => API.get(`/chat/admin/${userId}`),
+  sendAdminMessage: (userId, data) => API.post(`/chat/admin/${userId}/send`, data),
+};
+
+export const chatAPI = {
+  getHistory: () => API.get('/chat/history'),
+  sendMessage: (data) => API.post('/chat/send', data),
+};
+
+export const reportAPI = {
+  create: (data) => API.post('/reports', data),
+};
+
 export default API;

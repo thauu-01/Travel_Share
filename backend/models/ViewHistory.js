@@ -31,11 +31,10 @@ viewHistorySchema.virtual('post', {
   justOne: true
 });
 
-viewHistorySchema.pre('save', async function(next) {
+viewHistorySchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('view_history');
   }
-  next();
 });
 
 module.exports = mongoose.model('ViewHistory', viewHistorySchema);

@@ -8,7 +8,8 @@ const postSchema = new mongoose.Schema({
   user_id: { type: Number, ref: 'User', required: true },
   place_id: { type: Number, ref: 'Place', default: null },
   rating: { type: Number, default: null, min: 1, max: 5 },
-  status: { type: String, enum: ['draft', 'published'], default: 'published' },
+  status: { type: String, enum: ['draft', 'published', 'hidden', 'archived'], default: 'published' },
+  is_hidden: { type: Boolean, default: false },
   view_count: { type: Number, default: 0 }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
@@ -59,11 +60,10 @@ postSchema.virtual('views', {
   foreignField: 'post_id'
 });
 
-postSchema.pre('save', async function(next) {
+postSchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('posts');
   }
-  next();
 });
 
 module.exports = mongoose.model('Post', postSchema);

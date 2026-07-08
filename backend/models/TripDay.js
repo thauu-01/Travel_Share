@@ -31,11 +31,10 @@ tripDaySchema.virtual('places', {
   foreignField: 'trip_day_id'
 });
 
-tripDaySchema.pre('save', async function(next) {
+tripDaySchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('trip_days');
   }
-  next();
 });
 
 module.exports = mongoose.model('TripDay', tripDaySchema);

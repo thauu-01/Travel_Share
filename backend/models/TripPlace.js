@@ -32,11 +32,10 @@ tripPlaceSchema.virtual('place', {
   justOne: true
 });
 
-tripPlaceSchema.pre('save', async function(next) {
+tripPlaceSchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('trip_places');
   }
-  next();
 });
 
 module.exports = mongoose.model('TripPlace', tripPlaceSchema);

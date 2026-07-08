@@ -24,11 +24,10 @@ postImageSchema.virtual('post', {
   justOne: true
 });
 
-postImageSchema.pre('save', async function(next) {
+postImageSchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('post_images');
   }
-  next();
 });
 
 module.exports = mongoose.model('PostImage', postImageSchema);

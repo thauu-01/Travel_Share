@@ -41,11 +41,10 @@ notificationSchema.virtual('post', {
   justOne: true
 });
 
-notificationSchema.pre('save', async function(next) {
+notificationSchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('notifications');
   }
-  next();
 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

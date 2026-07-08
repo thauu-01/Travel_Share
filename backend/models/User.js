@@ -20,11 +20,10 @@ userSchema.virtual('id').get(function() {
   return this._id;
 });
 
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('users');
   }
-  next();
 });
 
 module.exports = mongoose.model('User', userSchema);

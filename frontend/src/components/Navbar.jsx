@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 import { notificationAPI } from '../services/api';
 import { io } from 'socket.io-client';
-import { FiBell, FiPlus, FiSearch, FiLogOut, FiMap, FiCompass, FiCalendar } from 'react-icons/fi';
+import { FiBell, FiPlus, FiSearch, FiLogOut, FiMap, FiCompass, FiCalendar, FiShield } from 'react-icons/fi';
 
 export default function Navbar() {
   const { isAuthenticated, user } = useSelector(state => state.auth);
@@ -79,6 +79,11 @@ export default function Navbar() {
         <Link to="/explore" className={isActive('/explore')}><FiCompass style={{marginRight:4}} /> Khám phá</Link>
         <Link to="/search" className={isActive('/search')}><FiSearch style={{marginRight:4}} /> Tìm kiếm</Link>
         {isAuthenticated && <Link to="/trips" className={isActive('/trips')}><FiCalendar style={{marginRight:4}} /> Lịch trình</Link>}
+        {isAuthenticated && user?.role === 'admin' && (
+          <Link to="/admin" className={location.pathname.startsWith('/admin') ? 'nav-link active' : 'nav-link'} style={{ color: '#6366f1', fontWeight: 600 }}>
+            <FiShield style={{ marginRight: 4 }} /> Quản trị
+          </Link>
+        )}
       </div>
       <div className="nav-actions">
         {isAuthenticated ? (

@@ -16,11 +16,10 @@ categorySchema.virtual('id').get(function() {
   return this._id;
 });
 
-categorySchema.pre('save', async function(next) {
+categorySchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('categories');
   }
-  next();
 });
 
 module.exports = mongoose.model('Category', categorySchema);

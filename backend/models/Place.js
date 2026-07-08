@@ -46,11 +46,10 @@ placeSchema.virtual('posts', {
   foreignField: 'place_id'
 });
 
-placeSchema.pre('save', async function(next) {
+placeSchema.pre('save', async function() {
   if (this.isNew && !this._id) {
     this._id = await getNextSequenceValue('places');
   }
-  next();
 });
 
 module.exports = mongoose.model('Place', placeSchema);

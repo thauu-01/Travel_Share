@@ -13,7 +13,6 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'travelshare',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
     transformation: [{ width: 1200, height: 800, crop: 'limit', quality: 'auto' }]
   }
 });

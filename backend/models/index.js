@@ -11,6 +11,8 @@ const Trip = require('./Trip');
 const TripDay = require('./TripDay');
 const TripPlace = require('./TripPlace');
 const Notification = require('./Notification');
+const Report = require('./Report');
+const ChatMessage = require('./ChatMessage');
 
 module.exports = {
   mongoose,
@@ -25,5 +27,7 @@ module.exports = {
   Trip,
   TripDay,
   TripPlace,
-  Notification
+  Notification,
+  Report,
+  ChatMessage
 };
