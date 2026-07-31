@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiPlus, FiEdit2, FiTrash2, FiSave, FiX } from 'react-icons/fi';
 
@@ -73,93 +73,84 @@ export default function AdminCategories() {
   };
 
   return (
-    <div className="animate-in" style={{ maxWidth: '800px' }}>
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>🏷️ Quản lý danh mục</h1>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: 4 }}>Thêm, sửa, hoặc xóa các loại danh mục phân loại du lịch</p>
-        </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
+    <div className="animate-in" style={{ width: '100%' }}>
+      <div className="mb-6 flex justify-between items-center">
+        <button 
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold shadow-sm shadow-blue-600/20 text-sm"
+          onClick={() => setShowAdd(!showAdd)}
+        >
           {showAdd ? 'Hủy' : 'Thêm danh mục'}
         </button>
       </div>
 
       {/* Add New Category form */}
       {showAdd && (
-        <form onSubmit={handleAddSubmit} style={{
-          background: 'white',
-          borderRadius: 12,
-          padding: '20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          border: '1px solid #e2e8f0',
-          marginBottom: '20px'
-        }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 600 }}>🏷️ Thêm danh mục mới</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr', gap: '12px', alignItems: 'end' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Icon</label>
+        <form onSubmit={handleAddSubmit} className="bg-white rounded-2xl p-5 shadow-sm border border-indigo-100 mb-6">
+          <h3 className="m-0 mb-4 text-base font-bold text-slate-800">🏷️ Thêm danh mục mới</h3>
+          <div className="grid grid-cols-[80px_1fr_1fr] gap-3 items-end">
+            <div className="mb-0">
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Icon</label>
               <input
                 type="text"
                 placeholder="🏖️"
-                className="form-input"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 value={newCat.icon}
                 onChange={e => setNewCat({ ...newCat, icon: e.target.value })}
                 required
               />
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Tên danh mục</label>
+            <div className="mb-0">
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Tên danh mục</label>
               <input
                 type="text"
                 placeholder="VD: Bãi biển"
-                className="form-input"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 value={newCat.name}
                 onChange={e => setNewCat({ ...newCat, name: e.target.value })}
                 required
               />
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Đường dẫn slug (Tùy chọn)</label>
+            <div className="mb-0">
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Đường dẫn slug (Tùy chọn)</label>
               <input
                 type="text"
                 placeholder="bai-bien"
-                className="form-input"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 value={newCat.slug}
                 onChange={e => setNewCat({ ...newCat, slug: e.target.value })}
               />
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <button type="submit" className="btn btn-primary btn-sm">Tạo mới</button>
+          <div className="flex justify-end mt-4">
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Tạo mới</button>
           </div>
         </form>
       )}
 
       {/* Categories table */}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-              <th style={{ padding: '14px 16px', width: '80px' }}>Icon</th>
-              <th style={{ padding: '14px 16px' }}>Tên danh mục</th>
-              <th style={{ padding: '14px 16px' }}>Slug</th>
-              <th style={{ padding: '14px 16px', textAlign: 'right' }}>Hành động</th>
+      <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-indigo-50">
+            <tr>
+              <th className="px-4 py-3 font-semibold w-20">Icon</th>
+              <th className="px-4 py-3 font-semibold">Tên danh mục</th>
+              <th className="px-4 py-3 font-semibold">Slug</th>
+              <th className="px-4 py-3 font-semibold text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-50">
             {loading ? (
               <tr>
-                <td colSpan={4} style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>Đang tải...</td>
+                <td colSpan={4} className="px-4 py-10 text-center text-slate-500 font-medium">Đang tải...</td>
               </tr>
             ) : categories.map(c => (
-              <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                 {/* Icon */}
-                <td style={{ padding: '14px 16px', fontSize: '1.25rem' }}>
+                <td className="px-4 py-3 text-xl">
                   {editingId === c.id ? (
                     <input
                       type="text"
-                      className="form-input"
-                      style={{ padding: '4px 8px', textAlign: 'center' }}
+                      className="w-full px-2 py-1 text-center text-sm border border-slate-300 rounded-md"
                       value={editCat.icon}
                       onChange={e => setEditCat({ ...editCat, icon: e.target.value })}
                     />
@@ -167,12 +158,11 @@ export default function AdminCategories() {
                 </td>
 
                 {/* Name */}
-                <td style={{ padding: '14px 16px', fontWeight: 600, color: '#0f172a' }}>
+                <td className="px-4 py-3 font-semibold text-slate-800">
                   {editingId === c.id ? (
                     <input
                       type="text"
-                      className="form-input"
-                      style={{ padding: '4px 8px' }}
+                      className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md"
                       value={editCat.name}
                       onChange={e => setEditCat({ ...editCat, name: e.target.value })}
                     />
@@ -180,12 +170,11 @@ export default function AdminCategories() {
                 </td>
 
                 {/* Slug */}
-                <td style={{ padding: '14px 16px', color: '#64748b' }}>
+                <td className="px-4 py-3 text-slate-600">
                   {editingId === c.id ? (
                     <input
                       type="text"
-                      className="form-input"
-                      style={{ padding: '4px 8px' }}
+                      className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md"
                       value={editCat.slug}
                       onChange={e => setEditCat({ ...editCat, slug: e.target.value })}
                     />
@@ -193,23 +182,23 @@ export default function AdminCategories() {
                 </td>
 
                 {/* Actions */}
-                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                <td className="px-4 py-3">
                   {editingId === c.id ? (
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                      <button onClick={() => handleEditSubmit(c.id)} className="btn btn-primary btn-sm" style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <FiSave /> Lưu
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <button onClick={() => handleEditSubmit(c.id)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 border border-transparent rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+                        <FiSave size={14} /> Lưu
                       </button>
-                      <button onClick={() => setEditingId(null)} className="btn btn-secondary btn-sm" style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <FiX /> Hủy
+                      <button onClick={() => setEditingId(null)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm">
+                        <FiX size={14} /> Hủy
                       </button>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                      <button onClick={() => handleStartEdit(c)} className="btn btn-secondary btn-sm" style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <FiEdit2 /> Sửa
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <button onClick={() => handleStartEdit(c)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm">
+                        <FiEdit2 size={14} /> Sửa
                       </button>
-                      <button onClick={() => handleDelete(c.id)} className="btn btn-sm" style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }}>
-                        <FiTrash2 /> Xóa
+                      <button onClick={() => handleDelete(c.id)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm">
+                        <FiTrash2 size={14} /> Xóa
                       </button>
                     </div>
                   )}

@@ -26,10 +26,31 @@ class PlaceController {
         .limit(limitNum)
         .skip(skipNum);
 
+      // Dynamically calculate average rating from Posts for 100% real-time accuracy
+      const placesWithRating = await Promise.all(rows.map(async (place) => {
+        const placeObj = place.toJSON();
+        const result = await Post.aggregate([
+          { $match: { place_id: place._id } },
+          { $group: { 
+              _id: '$place_id', 
+              avgRating: { $avg: '$rating' },
+              totalViews: { $sum: '$view_count' }
+          } }
+        ]);
+        if (result.length > 0) {
+          placeObj.avg_rating = result[0].avgRating ? Math.round(result[0].avgRating * 10) / 10 : 0;
+          placeObj.view_count = result[0].totalViews || 0;
+        } else {
+          placeObj.avg_rating = 0;
+          placeObj.view_count = 0;
+        }
+        return placeObj;
+      }));
+
       res.json({
         success: true,
         data: {
-          places: rows,
+          places: placesWithRating,
           pagination: {
             total: count,
             page: parseInt(page),
@@ -71,7 +92,24 @@ class PlaceController {
       place.view_count = (place.view_count || 0) + 1;
       await place.save();
       
-      res.json({ success: true, data: place });
+      const placeObj = place.toJSON();
+      const result = await Post.aggregate([
+        { $match: { place_id: place._id } },
+        { $group: { 
+            _id: '$place_id', 
+            avgRating: { $avg: '$rating' },
+            totalViews: { $sum: '$view_count' }
+        } }
+      ]);
+      if (result.length > 0) {
+        placeObj.avg_rating = result[0].avgRating ? Math.round(result[0].avgRating * 10) / 10 : 0;
+        placeObj.view_count = result[0].totalViews || 0;
+      } else {
+        placeObj.avg_rating = 0;
+        placeObj.view_count = 0;
+      }
+      
+      res.json({ success: true, data: placeObj });
     } catch (error) {
       console.error('GetById place error:', error);
       res.status(500).json({ success: false, message: 'Lỗi server' });

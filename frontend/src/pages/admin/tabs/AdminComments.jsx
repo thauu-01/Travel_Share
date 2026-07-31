@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiSearch, FiTrash2 } from 'react-icons/fi';
 
@@ -42,11 +42,6 @@ export default function AdminComments() {
 
   return (
     <div className="animate-in">
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>💬 Quản lý bình luận</h1>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: 4 }}>Kiểm duyệt và xóa bình luận thô tục, spam hoặc phản cảm</p>
-      </div>
-
       {/* Filter panel */}
       <div style={{
         background: 'white',
@@ -72,62 +67,63 @@ export default function AdminComments() {
       </div>
 
       {/* Comments table */}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-              <th style={{ padding: '14px 16px' }}>Họ tên</th>
-              <th style={{ padding: '14px 16px' }}>Nội dung bình luận</th>
-              <th style={{ padding: '14px 16px' }}>Bài viết liên kết</th>
-              <th style={{ padding: '14px 16px' }}>Thời gian gửi</th>
-              <th style={{ padding: '14px 16px', textAlign: 'right' }}>Hành động</th>
+      <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-indigo-50">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Họ tên</th>
+              <th className="px-4 py-3 font-semibold">Nội dung bình luận</th>
+              <th className="px-4 py-3 font-semibold">Bài viết liên kết</th>
+              <th className="px-4 py-3 font-semibold text-center">Thời gian gửi</th>
+              <th className="px-4 py-3 font-semibold text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-50">
             {loading ? (
               <tr>
-                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải bình luận...</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Đang tải bình luận...</td>
               </tr>
             ) : comments.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Không tìm thấy bình luận nào</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Không tìm thấy bình luận nào</td>
               </tr>
             ) : comments.map(c => (
-              <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                 {/* Author Name */}
-                <td style={{ padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div className="avatar" style={{ width: 28, height: 28, fontSize: '0.75rem' }}>
-                      {c.user?.avatar_url ? <img src={c.user.avatar_url} alt="" /> : c.user?.full_name[0].toUpperCase()}
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 shadow-sm border border-white">
+                      {c.user?.avatar_url ? <img src={c.user.avatar_url} alt="" className="w-full h-full object-cover" /> : c.user?.full_name[0].toUpperCase()}
                     </div>
-                    <span style={{ fontWeight: 600, color: '#0f172a' }}>{c.user?.full_name}</span>
+                    <span className="font-semibold text-slate-800 truncate max-w-[150px]">{c.user?.full_name}</span>
                   </div>
                 </td>
 
                 {/* Comment Content */}
-                <td style={{ padding: '14px 16px', color: '#334155', maxWidth: '300px', wordBreak: 'break-word' }}>
+                <td className="px-4 py-3 text-slate-700 max-w-[280px] break-words">
                   {c.content}
                 </td>
 
                 {/* Linked Post */}
-                <td style={{ padding: '14px 16px', color: '#64748b', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <td className="px-4 py-3 text-slate-600 text-xs truncate max-w-[180px]">
                   {c.post?.title || 'N/A'}
                 </td>
 
                 {/* Time */}
-                <td style={{ padding: '14px 16px', color: '#64748b' }}>
+                <td className="px-4 py-3 text-slate-500 text-xs text-center">
                   {new Date(c.created_at).toLocaleString('vi-VN')}
                 </td>
 
                 {/* Action delete */}
-                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    className="btn btn-sm"
-                    style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }}
-                  >
-                    <FiTrash2 /> Xóa
-                  </button>
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end">
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm"
+                    >
+                      <FiTrash2 size={14} /> Xóa
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

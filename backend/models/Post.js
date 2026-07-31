@@ -66,4 +66,47 @@ postSchema.pre('save', async function() {
   }
 });
 
+// Helper to recalculate place's average rating
+async function updatePlaceAvgRating(placeId) {
+  if (!placeId) return;
+  const Post = mongoose.model('Post');
+  const Place = mongoose.model('Place');
+  
+  try {
+    const result = await Post.aggregate([
+      { $match: { place_id: placeId, rating: { $ne: null } } },
+      { $group: { _id: '$place_id', avgRating: { $avg: '$rating' } } }
+    ]);
+    
+    let avg = 0;
+    if (result.length > 0) {
+      avg = Math.round(result[0].avgRating * 10) / 10; // Round to 1 decimal place
+    }
+    
+    await Place.findByIdAndUpdate(placeId, { avg_rating: avg });
+  } catch (error) {
+    console.error('Error recalculating avg_rating:', error);
+  }
+}
+
+postSchema.post('save', async function(doc) {
+  await updatePlaceAvgRating(doc.place_id);
+});
+
+postSchema.post('findOneAndUpdate', async function(doc) {
+  if (doc) {
+    await updatePlaceAvgRating(doc.place_id);
+  }
+});
+
+postSchema.post('findOneAndDelete', async function(doc) {
+  if (doc) {
+    await updatePlaceAvgRating(doc.place_id);
+  }
+});
+
+postSchema.post('deleteOne', { document: true, query: false }, async function(doc) {
+  await updatePlaceAvgRating(doc.place_id);
+});
+
 module.exports = mongoose.model('Post', postSchema);

@@ -1,9 +1,8 @@
 const path = require('path');
 const dotenv = require('dotenv');
-const { ChatMessage } = require('../models');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 function getApiKey() {
   const key = (process.env.CHAT_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
@@ -39,65 +38,22 @@ async function getAIReply(userMessage) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const prompt = `Bạn là trợ lý AI hỗ trợ của TravelShare - nền tảng chia sẻ trải nghiệm du lịch Việt Nam. Hãy trả lời cực kỳ ngắn gọn, thân thiện bằng tiếng Việt. Nếu câu hỏi không liên quan đến du lịch Việt Nam hoặc ứng dụng TravelShare, hãy lịch sự từ chối và hướng dẫn người dùng hỏi đúng chủ đề.\n\nUser hỏi: ${userMessage}`;
     const result = await model.generateContent(prompt);
     return result.response.text().trim();
   } catch (err) {
-    console.error('Gemini AI generation error:', err);
+    console.log('--- ERROR LOGGED (Simulated) ---');
+    console.log(err.message);
     return generateFallbackReply(userMessage);
   }
 }
 
-class ChatController {
-  // GET /api/chat/history
-  async getHistory(req, res) {
-    try {
-      const messages = await ChatMessage.find({ user_id: req.user.id }).sort({ created_at: 1 });
-      res.json({ success: true, data: messages });
-    } catch (error) {
-      console.error('Get chat history error:', error);
-      res.status(500).json({ success: false, message: 'Lỗi server' });
-    }
-  }
-
-  // POST /api/chat/send
-  async sendMessage(req, res) {
-    try {
-      const { message } = req.body;
-      if (!message || !message.trim()) {
-        return res.status(400).json({ success: false, message: 'Nội dung tin nhắn không được để trống' });
-      }
-
-      // 1. Save user message
-      const userMsg = await ChatMessage.create({
-        user_id: req.user.id,
-        sender_type: 'user',
-        message: message.trim()
-      });
-
-      // 2. Call Gemini AI helper to generate response
-      const aiResponseText = await getAIReply(message.trim());
-
-      // 3. Save AI message
-      const aiMsg = await ChatMessage.create({
-        user_id: req.user.id,
-        sender_type: 'ai',
-        message: aiResponseText
-      });
-
-      res.status(201).json({
-        success: true,
-        data: {
-          userMessage: userMsg,
-          aiMessage: aiMsg
-        }
-      });
-    } catch (error) {
-      console.error('Send message error:', error);
-      res.status(500).json({ success: false, message: 'Lỗi server' });
-    }
-  }
+async function runTest() {
+  const question = "địa điểm nào đẹp";
+  console.log("Hỏi: " + question);
+  const answer = await getAIReply(question);
+  console.log("Trả lời: " + answer);
 }
 
-module.exports = new ChatController();
+runTest();

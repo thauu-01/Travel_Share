@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiSend, FiBell } from 'react-icons/fi';
 
@@ -33,26 +33,21 @@ export default function AdminNotifications() {
   };
 
   return (
-    <div className="animate-in" style={{ maxWidth: '640px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>📢 Thông báo hệ thống (Broadcast)</h1>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: 4 }}>Gửi thông báo real-time và lưu trữ trong hộp thư của toàn bộ thành viên</p>
-      </div>
-
-      <div style={{ background: 'white', borderRadius: 12, padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, color: '#4f46e5' }}>
-          <FiBell size={22} />
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Soạn thông báo phát sóng</h3>
+    <div className="animate-in" style={{ width: '100%' }}>
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-indigo-100 max-w-2xl mx-auto">
+        <div className="flex items-center gap-2 mb-6 text-indigo-600">
+          <FiBell size={24} />
+          <h3 className="m-0 text-lg font-bold text-slate-800">Soạn thông báo phát sóng</h3>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Title */}
-          <div className="form-group">
-            <label className="form-label" style={{ fontWeight: 600 }}>Tiêu đề thông báo</label>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Tiêu đề thông báo</label>
             <input
               type="text"
               placeholder="Ví dụ: Bảo trì hệ thống hoặc Sự kiện mới..."
-              className="form-input"
+              className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               value={title}
               onChange={e => setTitle(e.target.value)}
               required
@@ -60,10 +55,10 @@ export default function AdminNotifications() {
           </div>
 
           {/* Message Content */}
-          <div className="form-group">
-            <label className="form-label" style={{ fontWeight: 600 }}>Nội dung thông báo chi tiết</label>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Nội dung thông báo chi tiết</label>
             <textarea
-              className="form-textarea"
+              className="w-full px-4 py-3 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               rows={5}
               placeholder="Nhập nội dung thông báo gửi tới người dùng..."
               value={message}
@@ -72,14 +67,13 @@ export default function AdminNotifications() {
             />
           </div>
 
-          <div style={{ marginTop: '20px' }}>
+          <div className="pt-2">
             <button
               type="submit"
-              className="btn btn-primary"
               disabled={sending}
-              style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold shadow-sm shadow-indigo-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <FiSend /> {sending ? 'Đang phát sóng...' : 'Gửi thông báo tới toàn bộ hệ thống'}
+              <FiSend size={18} /> {sending ? 'Đang phát sóng...' : 'Gửi thông báo tới toàn bộ hệ thống'}
             </button>
           </div>
         </form>

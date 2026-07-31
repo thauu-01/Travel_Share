@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiCheck, FiX, FiExternalLink } from 'react-icons/fi';
 
@@ -69,11 +69,6 @@ export default function AdminReports() {
 
   return (
     <div className="animate-in">
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>🚩 Kiểm duyệt báo cáo vi phạm</h1>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: 4 }}>Xem xét và xử lý các báo cáo vi phạm bài đăng, comment hoặc người dùng từ cộng đồng</p>
-      </div>
-
       {/* Filter Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', marginBottom: '20px' }}>
         <button
@@ -97,92 +92,84 @@ export default function AdminReports() {
       </div>
 
       {/* Reports Table */}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-              <th style={{ padding: '14px 16px' }}>Loại đối tượng</th>
-              <th style={{ padding: '14px 16px' }}>Nội dung bị báo cáo</th>
-              <th style={{ padding: '14px 16px' }}>Người báo cáo</th>
-              <th style={{ padding: '14px 16px' }}>Lý do</th>
-              <th style={{ padding: '14px 16px', textAlign: 'right' }}>Hành động</th>
+      <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-indigo-50">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Loại đối tượng</th>
+              <th className="px-4 py-3 font-semibold">Nội dung bị báo cáo</th>
+              <th className="px-4 py-3 font-semibold">Người báo cáo</th>
+              <th className="px-4 py-3 font-semibold">Lý do</th>
+              <th className="px-4 py-3 font-semibold text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-50">
             {loading ? (
               <tr>
-                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải báo cáo...</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Đang tải báo cáo...</td>
               </tr>
             ) : reports.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Không có báo cáo nào ở trạng thái này</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Không có báo cáo nào ở trạng thái này</td>
               </tr>
             ) : reports.map(r => (
-              <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={r.id} className="hover:bg-slate-50 transition-colors">
                 {/* Target Type */}
-                <td style={{ padding: '14px 16px' }}>
-                  <span style={{
-                    backgroundColor: r.target_type === 'post' ? '#e0f2fe' : r.target_type === 'comment' ? '#fef3c7' : '#fee2e2',
-                    color: r.target_type === 'post' ? '#0369a1' : r.target_type === 'comment' ? '#b45309' : '#b91c1c',
-                    padding: '4px 8px',
-                    borderRadius: 12,
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    textTransform: 'uppercase'
-                  }}>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${
+                    r.target_type === 'post' ? 'bg-sky-50 text-sky-600' : r.target_type === 'comment' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
+                  }`}>
                     {r.target_type === 'post' ? 'Bài viết' : r.target_type === 'comment' ? 'Bình luận' : 'Thành viên'}
                   </span>
                 </td>
 
                 {/* Target Snippet */}
-                <td style={{ padding: '14px 16px', color: '#334155', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <td className="px-4 py-3 text-slate-700 max-w-[260px] truncate">
                   {r.target_type === 'post' ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <a href={`/posts/${r.target_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4f46e5', textDecoration: 'none', fontWeight: 500 }}>
+                    <div className="flex items-center gap-1.5">
+                      <a href={`/posts/${r.target_id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-blue-600 font-medium hover:underline">
                         {r.target?.title || `Bài viết #${r.target_id}`} <FiExternalLink size={12} />
                       </a>
                     </div>
                   ) : r.target_type === 'comment' ? (
-                    <span>"{r.target?.content || `Bình luận #${r.target_id}`}"</span>
+                    <span className="italic">"{r.target?.content || `Bình luận #${r.target_id}`}"</span>
                   ) : (
                     <span>User: {r.target?.full_name || `User #${r.target_id}`} ({r.target?.email})</span>
                   )}
                 </td>
 
                 {/* Reporter */}
-                <td style={{ padding: '14px 16px', color: '#475569' }}>
-                  <div>{r.reporter?.full_name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{r.reporter?.email}</div>
+                <td className="px-4 py-3 text-slate-600">
+                  <div className="font-semibold text-slate-800">{r.reporter?.full_name}</div>
+                  <div className="text-xs text-slate-500">{r.reporter?.email}</div>
                 </td>
 
                 {/* Reason */}
-                <td style={{ padding: '14px 16px', color: '#b91c1c', fontWeight: 500 }}>
+                <td className="px-4 py-3 text-red-600 font-semibold text-xs">
                   {getReasonText(r.reason)}
                 </td>
 
                 {/* Action buttons */}
-                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                <td className="px-4 py-3">
                   {r.status === 'pending' ? (
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <div className="flex items-center gap-1.5 justify-end">
                       <button
                         onClick={() => handleOpenResolve(r.id, 'resolved')}
-                        className="btn btn-primary btn-sm"
-                        style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#16a34a', borderColor: '#16a34a' }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 border border-transparent rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
                       >
-                        <FiCheck /> Duyệt
+                        <FiCheck size={14} /> Duyệt
                       </button>
                       <button
                         onClick={() => handleOpenResolve(r.id, 'rejected')}
-                        className="btn btn-sm"
-                        style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#dc2626', color: 'white', borderColor: '#dc2626' }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm"
                       >
-                        <FiX /> Bác bỏ
+                        <FiX size={14} /> Bác bỏ
                       </button>
                     </div>
                   ) : (
-                    <span style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic' }}>
+                    <div className="text-right text-xs text-slate-500 italic">
                       Đã xử lý {r.admin_note ? `(${r.admin_note})` : ''}
-                    </span>
+                    </div>
                   )}
                 </td>
               </tr>

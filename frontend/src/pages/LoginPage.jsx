@@ -16,9 +16,10 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authAPI.login(form);
-      dispatch(loginSuccess(res.data.data));
+      const userData = res.data.data;
+      dispatch(loginSuccess(userData));
       toast.success('Đăng nhập thành công!');
-      navigate('/');
+      navigate(userData?.user?.role === 'admin' ? '/admin' : '/');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Đăng nhập thất bại');
     } finally {
@@ -27,29 +28,44 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card animate-in">
-        <div style={{ textAlign: 'center', marginBottom: '0.5rem', fontSize: '2.5rem' }}>✈️</div>
-        <h1 className="auth-title">Đăng nhập</h1>
-        <p className="auth-subtitle">Chào mừng trở lại TravelShare</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f0f7ff] via-[#e0e7ff] to-[#f0f7ff]">
+      <div className="w-full max-w-md p-10 bg-white border border-indigo-100 rounded-3xl animate-in">
+        <div className="text-center mb-2 text-[2.5rem]">✈️</div>
+        <h1 className="text-3xl font-extrabold text-center mb-1 gradient-text">Đăng nhập</h1>
+        <p className="text-slate-500 text-center mt-1 mb-6">Chào mừng trở lại TravelShare</p>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Email</label>
-            <input type="email" className="form-input" placeholder="you@example.com"
-              value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
+          <div className="mb-5">
+            <label className="block mb-2 font-semibold text-sm text-slate-500">Email</label>
+            <input
+              type="email"
+              className="w-full px-4 py-3 bg-white border border-indigo-100 rounded-xl text-slate-900 text-sm transition-all focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={e => setForm({...form, email: e.target.value})}
+              required
+            />
           </div>
-          <div className="form-group">
-            <label className="form-label">Mật khẩu</label>
-            <input type="password" className="form-input" placeholder="••••••••"
-              value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
+          <div className="mb-5">
+            <label className="block mb-2 font-semibold text-sm text-slate-500">Mật khẩu</label>
+            <input
+              type="password"
+              className="w-full px-4 py-3 bg-white border border-indigo-100 rounded-xl text-slate-900 text-sm transition-all focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={e => setForm({...form, password: e.target.value})}
+              required
+            />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
-            disabled={loading}>
+          <button
+            type="submit"
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm cursor-pointer transition-all border border-transparent bg-gradient-to-br from-blue-500 to-blue-700 text-white hover:-translate-y-px hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={loading}
+          >
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
-        <p style={{ textAlign: 'center', marginTop: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+        <p className="text-center mt-6 text-slate-400 text-sm">
+          Chưa có tài khoản? <Link to="/register" className="text-blue-600 font-semibold hover:underline">Đăng ký ngay</Link>
         </p>
       </div>
     </div>

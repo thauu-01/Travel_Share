@@ -42,24 +42,31 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="page">
-      <div className="container">
-        <div className="page-header animate-in">
-          <h1 className="page-title">🗺️ Khám phá địa điểm</h1>
-          <p className="page-subtitle">Tương tác trên bản đồ hoặc lọc theo danh mục</p>
+    <div className="pt-24 min-h-screen bg-[#f0f7ff]">
+      <div className="max-w-7xl mx-auto px-6 pb-12">
+        <div className="text-center mb-10 animate-in">
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-3">🗺️ Khám phá địa điểm</h1>
+          <p className="text-slate-500">Tương tác trên bản đồ hoặc lọc theo danh mục</p>
         </div>
 
-        <div className="filter-chips animate-in delay-1">
+        <div className="flex flex-wrap justify-center gap-3 mb-10 animate-in delay-1">
           {categories.map(c => (
-            <button key={c.id} className={`chip ${selectedCategory === String(c.id) ? 'active' : ''}`}
-              onClick={() => handleFilter(String(c.id))}>
-              {c.icon} {c.name}
+            <button 
+              key={c.id} 
+              className={`px-4 py-2 rounded-full border transition-all font-medium flex items-center gap-2 cursor-pointer ${
+                selectedCategory === String(c.id) 
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20' 
+                  : 'bg-white text-slate-600 border-indigo-100 hover:bg-blue-50 hover:text-blue-600'
+              }`}
+              onClick={() => handleFilter(String(c.id))}
+            >
+              <span className="text-lg">{c.icon}</span> {c.name}
             </button>
           ))}
         </div>
 
         {/* MAP */}
-        <div className="map-container animate-in delay-2" style={{ marginBottom: '2rem' }}>
+        <div className="rounded-3xl overflow-hidden border border-indigo-100 shadow-xl shadow-blue-900/5 mb-12 relative z-0 animate-in delay-2">
           <MapContainer center={[16.0, 106.0]} zoom={6} style={{ height: 500 }} scrollWheelZoom={true}>
             <TileLayer
               attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
@@ -68,18 +75,18 @@ export default function ExplorePage() {
             {places.map(place => (
               <Marker key={place.id} position={[parseFloat(place.latitude), parseFloat(place.longitude)]}>
                 <Popup>
-                  <div style={{ minWidth: 180 }}>
-                    <strong style={{ fontSize: '0.9rem' }}>{place.name}</strong>
-                    <div style={{ fontSize: '0.75rem', color: '#666', margin: '0.25rem 0' }}>
+                  <div className="min-w-[180px] p-1 font-sans">
+                    <strong className="text-sm font-bold text-slate-900 block mb-1">{place.name}</strong>
+                    <div className="text-xs text-slate-500 mb-2 flex items-center gap-1">
                       {place.category?.icon} {place.category?.name} • {place.province}
                     </div>
-                    <div style={{ fontSize: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-                      <span>⭐ {place.avg_rating}</span>
-                      <span>👁 {place.view_count}</span>
+                    <div className="text-xs font-semibold text-slate-700 flex gap-3 bg-slate-50 p-1.5 rounded-lg mb-2">
+                      <span className="flex items-center gap-1"><FiStar className="text-amber-500"/> {place.avg_rating}/5</span>
+                      <span className="flex items-center gap-1"><FiEye className="text-blue-500"/> {place.view_count}</span>
                     </div>
                     <Link to={`/search?province=${place.province}`}
-                      style={{ fontSize: '0.75rem', display: 'block', marginTop: '0.5rem' }}>
-                      Xem bài viết →
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                      Xem bài viết <span className="text-lg leading-none">→</span>
                     </Link>
                   </div>
                 </Popup>
@@ -89,30 +96,41 @@ export default function ExplorePage() {
         </div>
 
         {/* PLACE LIST */}
-        <div className="grid grid-4">
-          {places.map(place => (
-            <div key={place.id} className="card animate-in">
-              <div className="card-body">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>{place.category?.icon || '📍'}</span>
-                  <h3 className="card-title" style={{ marginBottom: 0 }}>{place.name}</h3>
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-10 h-10 border-4 border-indigo-100 border-t-blue-600 rounded-full animate-spin"></div>
+          </div>
+        ) : places.length === 0 ? (
+          <div className="text-center p-12 bg-white rounded-3xl border-2 border-dashed border-indigo-100 text-slate-500 animate-in delay-3">
+            <div className="text-4xl mb-3">🔍</div>
+            <p className="font-medium text-lg">Không tìm thấy địa điểm nào</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in delay-3">
+            {places.map(place => (
+              <Link to={`/search?province=${place.province}&search=${encodeURIComponent(place.name)}`} key={place.id} className="block bg-white rounded-2xl border border-indigo-100 p-5 hover:-translate-y-1 hover:shadow-xl hover:border-blue-300/50 transition-all group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-xl group-hover:bg-blue-100 transition-colors">
+                    {place.category?.icon || '📍'}
+                  </div>
+                  <h3 className="font-bold text-slate-900 leading-tight">{place.name}</h3>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-                  <FiMapPin size={12} /> {place.province}
+                
+                <div className="text-sm font-medium text-blue-600 flex items-center gap-1.5 mb-3 bg-blue-50 inline-flex px-2.5 py-1 rounded-lg">
+                  <FiMapPin size={14} /> {place.province}
                 </div>
-                <p className="card-text" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                
+                <p className="text-sm text-slate-500 mb-4 line-clamp-2 min-h-[2.5rem]">
                   {place.description}
                 </p>
-                <div className="card-meta">
-                  <span><FiStar size={12} /> {place.avg_rating}</span>
-                  <span><FiEye size={12} /> {place.view_count}</span>
+                
+                <div className="flex items-center gap-4 text-xs font-semibold text-slate-400 border-t border-indigo-50 pt-3">
+                  <span className="flex items-center gap-1.5"><FiStar size={14} className="text-amber-400"/> {place.avg_rating}/5</span>
+                  <span className="flex items-center gap-1.5"><FiEye size={14} /> {place.view_count}</span>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        {places.length === 0 && !loading && (
-          <div className="empty-state"><div className="icon">🔍</div>Không tìm thấy địa điểm nào</div>
+              </Link>
+            ))}
+          </div>
         )}
       </div>
     </div>

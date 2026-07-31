@@ -26,10 +26,15 @@ class PostController {
       }
 
       if (search) {
-        where.$or = [
-          { title: { $regex: search, $options: 'i' } },
-          { content: { $regex: search, $options: 'i' } }
-        ];
+        const keywords = search.split(/\s+/).filter(k => k.trim());
+        if (keywords.length > 0) {
+          where.$and = keywords.map(kw => ({
+            $or: [
+              { title: { $regex: kw, $options: 'i' } },
+              { content: { $regex: kw, $options: 'i' } }
+            ]
+          }));
+        }
       }
 
       let sortObj = { created_at: -1 };
@@ -71,12 +76,8 @@ class PostController {
   // GET /api/posts/trending
   async getTrending(req, res) {
     try {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
       const posts = await Post.find({
-        status: 'published',
-        created_at: { $gte: sevenDaysAgo }
+        status: 'published'
       })
         .populate('author', 'id full_name avatar_url')
         .populate({
@@ -218,7 +219,7 @@ class PostController {
       if (!post) {
         return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết' });
       }
-      if (post.user_id !== req.user.id && req.user.role !== 'admin') {
+      if (String(post.user_id) !== String(req.user.id) && req.user.role !== 'admin') {
         return res.status(403).json({ success: false, message: 'Bạn không có quyền sửa bài viết này' });
       }
 
@@ -231,6 +232,23 @@ class PostController {
       if (status !== undefined) post.status = status;
 
       await post.save();
+
+      const PostImage = require('../models/PostImage');
+      
+      if (req.body.images_to_remove) {
+        let removeIds = req.body.images_to_remove;
+        if (!Array.isArray(removeIds)) removeIds = [removeIds];
+        await PostImage.deleteMany({ _id: { $in: removeIds }, post_id: post.id });
+      }
+
+      if (req.files && req.files.length > 0) {
+        const images = req.files.map((file) => ({
+          post_id: post.id,
+          image_url: file.path,
+          is_cover: false
+        }));
+        await PostImage.insertMany(images);
+      }
 
       res.json({ success: true, message: 'Cập nhật bài viết thành công', data: post });
     } catch (error) {

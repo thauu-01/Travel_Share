@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiSearch, FiCheck, FiSlash, FiUserPlus, FiUserMinus } from 'react-icons/fi';
 
@@ -64,11 +64,6 @@ export default function AdminUsers() {
 
   return (
     <div className="animate-in">
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>👥 Quản lý người dùng</h1>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: 4 }}>Phân quyền, khóa hoặc mở khóa tài khoản thành viên</p>
-      </div>
-
       {/* Filter and search bar */}
       <div style={{
         background: 'white',
@@ -120,88 +115,83 @@ export default function AdminUsers() {
       </div>
 
       {/* Users table */}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-              <th style={{ padding: '14px 16px' }}>Họ tên</th>
-              <th style={{ padding: '14px 16px' }}>Email</th>
-              <th style={{ padding: '14px 16px', textAlign: 'center' }}>Quyền hạn</th>
-              <th style={{ padding: '14px 16px', textAlign: 'center' }}>Trạng thái</th>
-              <th style={{ padding: '14px 16px', textAlign: 'right' }}>Hành động</th>
+      <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-indigo-50">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Họ tên</th>
+              <th className="px-4 py-3 font-semibold">Email</th>
+              <th className="px-4 py-3 font-semibold text-center">Quyền hạn</th>
+              <th className="px-4 py-3 font-semibold text-center">Trạng thái</th>
+              <th className="px-4 py-3 font-semibold text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-50">
             {loading ? (
               <tr>
-                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu...</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Đang tải dữ liệu...</td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Không tìm thấy người dùng phù hợp</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Không tìm thấy người dùng phù hợp</td>
               </tr>
             ) : users.map(u => (
-              <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                 {/* Avatar and Name */}
-                <td style={{ padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div className="avatar" style={{ width: 32, height: 32 }}>
-                      {u.avatar_url ? <img src={u.avatar_url} alt="" /> : u.full_name[0].toUpperCase()}
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 shadow-sm border border-white">
+                      {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.full_name[0].toUpperCase()}
                     </div>
-                    <span style={{ fontWeight: 600, color: '#0f172a' }}>{u.full_name}</span>
+                    <span className="font-semibold text-slate-800 truncate max-w-[200px]">{u.full_name}</span>
                   </div>
                 </td>
 
                 {/* Email */}
-                <td style={{ padding: '14px 16px', color: '#475569' }}>{u.email}</td>
+                <td className="px-4 py-3 text-slate-600 truncate max-w-[200px]">
+                  {u.email}
+                </td>
 
                 {/* Role */}
-                <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                <td className="px-4 py-3 text-center">
                   {u.role === 'admin' ? (
-                    <span style={{ backgroundColor: '#ede9fe', color: '#6366f1', padding: '4px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 600 }}>Admin</span>
+                    <span className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Admin</span>
                   ) : (
-                    <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 500 }}>User</span>
+                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">User</span>
                   )}
                 </td>
 
                 {/* Status */}
-                <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                <td className="px-4 py-3 text-center">
                   {u.is_active ? (
-                    <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 600 }}>Hoạt động</span>
+                    <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Hoạt động</span>
                   ) : (
-                    <span style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '4px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 600 }}>Bị khóa</span>
+                    <span className="bg-red-50 text-red-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Bị khóa</span>
                   )}
                 </td>
 
                 {/* Actions */}
-                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1.5 justify-end">
                     {/* Promote / Demote */}
                     <button
                       onClick={() => handleRoleToggle(u.id, u.role)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '4px 8px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm"
                     >
-                      {u.role === 'admin' ? <FiUserMinus /> : <FiUserPlus />}
+                      {u.role === 'admin' ? <FiUserMinus size={14} /> : <FiUserPlus size={14} />}
                       {u.role === 'admin' ? 'Hạ quyền' : 'Lên Admin'}
                     </button>
 
                     {/* Ban / Unban */}
                     <button
                       onClick={() => handleBanToggle(u.id, u.is_active)}
-                      className={u.is_active ? "btn btn-sm" : "btn btn-primary btn-sm"}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '0.8rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        backgroundColor: u.is_active ? '#fee2e2' : undefined,
-                        color: u.is_active ? '#dc2626' : undefined,
-                        border: u.is_active ? '1px solid #fecaca' : undefined
-                      }}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors shadow-sm border ${
+                        u.is_active 
+                          ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100 hover:border-red-200' 
+                          : 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200'
+                      }`}
                     >
-                      {u.is_active ? <FiSlash /> : <FiCheck />}
+                      {u.is_active ? <FiSlash size={14} /> : <FiCheck size={14} />}
                       {u.is_active ? 'Khóa' : 'Mở khóa'}
                     </button>
                   </div>

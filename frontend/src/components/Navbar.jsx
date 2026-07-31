@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 import { notificationAPI } from '../services/api';
 import { io } from 'socket.io-client';
-import { FiBell, FiPlus, FiSearch, FiLogOut, FiMap, FiCompass, FiCalendar, FiShield } from 'react-icons/fi';
+import { FiBell, FiPlus, FiSearch, FiLogOut, FiCompass, FiCalendar } from 'react-icons/fi';
 
 export default function Navbar() {
   const { isAuthenticated, user } = useSelector(state => state.auth);
@@ -14,7 +14,9 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const notifRef = useRef(null);
+  const userMenuRef = useRef(null);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export default function Navbar() {
   useEffect(() => {
     const handleClick = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotif(false);
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setShowUserMenu(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -55,11 +58,26 @@ export default function Navbar() {
   };
 
   const handleLogout = () => {
+    setShowUserMenu(false);
+    setShowNotif(false);
     dispatch(logout());
     navigate('/');
   };
 
-  const isActive = (path) => location.pathname === path ? 'nav-link active' : 'nav-link';
+  const handleGoToProfile = () => {
+    setShowUserMenu(false);
+    navigate('/profile');
+  };
+
+  const handleGoToAdmin = () => {
+    setShowUserMenu(false);
+    navigate('/admin');
+  };
+
+  const isActive = (path) =>
+    location.pathname === path
+      ? 'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-blue-600 bg-blue-50/80 font-medium text-[0.9rem] transition-all'
+      : 'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-slate-500 font-medium text-[0.9rem] transition-all hover:text-blue-600 hover:bg-blue-50/80';
 
   const timeAgo = (date) => {
     const s = Math.floor((Date.now() - new Date(date)) / 1000);
@@ -72,59 +90,153 @@ export default function Navbar() {
   if (location.pathname === '/login' || location.pathname === '/register') return null;
 
   return (
-    <nav className="navbar">
-      <Link to="/" className="navbar-brand"><span>✈️</span> TravelShare</Link>
-      <div className="nav-links">
+    <nav className="fixed top-0 left-0 right-0 z-[1000] bg-white/95 backdrop-blur-xl border-b border-indigo-100 px-8 h-16 flex items-center justify-between">
+      {/* Brand */}
+      <Link to="/" className="flex items-center gap-2 text-[1.35rem] font-extrabold gradient-text cursor-pointer">
+        <span>✈️</span> TravelShare
+      </Link>
+
+      {/* Nav Links */}
+      <div className="flex items-center gap-1">
         <Link to="/" className={isActive('/')}>Trang chủ</Link>
-        <Link to="/explore" className={isActive('/explore')}><FiCompass style={{marginRight:4}} /> Khám phá</Link>
-        <Link to="/search" className={isActive('/search')}><FiSearch style={{marginRight:4}} /> Tìm kiếm</Link>
-        {isAuthenticated && <Link to="/trips" className={isActive('/trips')}><FiCalendar style={{marginRight:4}} /> Lịch trình</Link>}
-        {isAuthenticated && user?.role === 'admin' && (
-          <Link to="/admin" className={location.pathname.startsWith('/admin') ? 'nav-link active' : 'nav-link'} style={{ color: '#6366f1', fontWeight: 600 }}>
-            <FiShield style={{ marginRight: 4 }} /> Quản trị
+        <Link to="/explore" className={isActive('/explore')}>
+          <FiCompass /> Khám phá
+        </Link>
+        <Link to="/search" className={isActive('/search')}>
+          <FiSearch /> Tìm kiếm
+        </Link>
+        {isAuthenticated && (
+          <Link to="/trips" className={isActive('/trips')}>
+            <FiCalendar /> Lịch trình
           </Link>
         )}
       </div>
-      <div className="nav-actions">
+
+      {/* Nav Actions */}
+      <div className="flex items-center gap-3">
         {isAuthenticated ? (
           <>
-            <Link to="/create-post" className="btn btn-primary btn-sm"><FiPlus /> Viết bài</Link>
-            <div className="notif-wrapper" ref={notifRef}>
-              <button className="btn-icon" onClick={() => setShowNotif(!showNotif)}><FiBell />
-                {unreadCount > 0 && <span className="notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            {/* Create Post Button */}
+            <Link
+              to="/create-post"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-all border border-transparent bg-gradient-to-br from-blue-500 to-blue-700 text-white hover:-translate-y-px hover:shadow-lg"
+            >
+              <FiPlus /> Viết bài
+            </Link>
+
+            {/* Notification Bell */}
+            <div className="relative" ref={notifRef}>
+              <button
+                className="w-10 h-10 p-0 flex items-center justify-center rounded-full bg-gray-100 border border-indigo-100 text-slate-500 cursor-pointer hover:bg-blue-100 hover:text-blue-600 transition-all"
+                onClick={() => setShowNotif(!showNotif)}
+              >
+                <FiBell />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[0.65rem] font-bold flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
+
               {showNotif && (
-                <div className="notif-dropdown">
-                  <div className="notif-header">
+                <div className="absolute top-[50px] right-0 w-[360px] max-h-[400px] bg-white border border-indigo-100 rounded-2xl shadow-xl overflow-y-auto z-[100]">
+                  {/* Notification Header */}
+                  <div className="p-4 border-b border-indigo-100 flex justify-between items-center font-bold">
                     <span>Thông báo</span>
-                    {unreadCount > 0 && <button className="btn btn-sm btn-secondary" onClick={handleMarkAllRead}>Đọc tất cả</button>}
+                    {unreadCount > 0 && (
+                      <button
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-all border border-indigo-100 bg-gray-100 text-slate-900 hover:bg-blue-50"
+                        onClick={handleMarkAllRead}
+                      >
+                        Đọc tất cả
+                      </button>
+                    )}
                   </div>
+
                   {notifications.length === 0 ? (
-                    <div className="empty-state" style={{padding:'2rem'}}>Chưa có thông báo</div>
-                  ) : notifications.slice(0, 20).map(n => (
-                    <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`}
-                      onClick={() => { if (n.post_id) navigate(`/posts/${n.post_id}`); setShowNotif(false); }}>
-                      <div className="avatar" style={{width:32,height:32,fontSize:'0.7rem'}}>
-                        {n.fromUser?.avatar_url ? <img src={n.fromUser.avatar_url} alt="" /> : (n.fromUser?.full_name?.[0] || '?')}
-                      </div>
-                      <div style={{flex:1}}>
-                        <div className="notif-text">{n.message}</div>
-                        <div className="notif-time">{timeAgo(n.created_at)}</div>
-                      </div>
+                    <div className="text-center py-12 text-slate-400 text-sm" style={{ padding: '2rem' }}>
+                      Chưa có thông báo
                     </div>
-                  ))}
+                  ) : (
+                    notifications.slice(0, 20).map(n => (
+                      <div
+                        key={n.id}
+                        className={`flex items-start gap-3 px-4 py-3 border-b border-indigo-100 transition-all cursor-pointer hover:bg-blue-50/60 ${!n.is_read ? 'bg-blue-50/80' : ''}`}
+                        onClick={() => { if (n.post_id) navigate(`/posts/${n.post_id}`); setShowNotif(false); }}
+                      >
+                        {/* Notif Avatar */}
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-[0.7rem] overflow-hidden shrink-0">
+                          {n.fromUser?.avatar_url
+                            ? <img src={n.fromUser.avatar_url} alt="" />
+                            : (n.fromUser?.full_name?.[0] || '?')}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm text-slate-900">{n.message}</div>
+                          <div className="text-xs text-slate-400 mt-0.5">{timeAgo(n.created_at)}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
-            <Link to={`/profile/${user.id}`} className="avatar" title={user.full_name}>
-              {user.avatar_url ? <img src={user.avatar_url} alt="" /> : user.full_name?.[0]}
-            </Link>
-            <button className="btn-icon" onClick={handleLogout} title="Đăng xuất"><FiLogOut /></button>
+
+            {/* User Menu */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                title={user.full_name}
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0 cursor-pointer border-2 border-white hover:ring-2 hover:ring-blue-300 transition-all"
+              >
+                {user.avatar_url ? <img src={user.avatar_url} alt="" /> : user.full_name?.[0]}
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute top-[calc(100%+0.5rem)] right-0 min-w-[180px] p-1.5 bg-white border border-indigo-100 rounded-2xl shadow-xl z-[120]">
+                  <button
+                    type="button"
+                    className="w-full border-none bg-transparent px-3.5 py-2.5 flex justify-start items-center gap-2 rounded-lg text-slate-900 font-semibold cursor-pointer hover:bg-blue-50 hover:text-blue-600"
+                    onClick={handleGoToProfile}
+                  >
+                    Hồ sơ
+                  </button>
+                  {user?.role === 'admin' && (
+                    <button
+                      type="button"
+                      className="w-full border-none bg-transparent px-3.5 py-2.5 flex justify-start items-center gap-2 rounded-lg text-slate-900 font-semibold cursor-pointer hover:bg-blue-50 hover:text-blue-600"
+                      onClick={handleGoToAdmin}
+                    >
+                      Trang quản trị
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Logout Button */}
+            <button
+              className="w-10 h-10 p-0 flex items-center justify-center rounded-full bg-gray-100 border border-indigo-100 text-slate-500 cursor-pointer hover:bg-blue-100 hover:text-blue-600 transition-all"
+              onClick={handleLogout}
+              title="Đăng xuất"
+            >
+              <FiLogOut />
+            </button>
           </>
         ) : (
           <>
-            <Link to="/login" className="btn btn-secondary btn-sm">Đăng nhập</Link>
-            <Link to="/register" className="btn btn-primary btn-sm">Đăng ký</Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-all border border-indigo-100 bg-gray-100 text-slate-900 hover:bg-blue-50"
+            >
+              Đăng nhập
+            </Link>
+            <Link
+              to="/register"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-all border border-transparent bg-gradient-to-br from-blue-500 to-blue-700 text-white hover:-translate-y-px hover:shadow-lg"
+            >
+              Đăng ký
+            </Link>
           </>
         )}
       </div>

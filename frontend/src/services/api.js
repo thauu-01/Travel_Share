@@ -36,7 +36,7 @@ export const postAPI = {
   getById: (id) => API.get(`/posts/${id}`),
   getTrending: () => API.get('/posts/trending'),
   create: (data) => API.post('/posts', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  update: (id, data) => API.put(`/posts/${id}`, data),
+  update: (id, data) => API.put(`/posts/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   delete: (id) => API.delete(`/posts/${id}`),
   toggleLike: (id) => API.post(`/posts/${id}/like`),
 };

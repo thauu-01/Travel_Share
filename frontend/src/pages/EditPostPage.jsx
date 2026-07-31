@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { postAPI, placeAPI, categoryAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { FiImage, FiSend, FiMapPin, FiPlus, FiX } from 'react-icons/fi';
+import { FiSave, FiMapPin, FiPlus } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -16,7 +16,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Map controller component to handle flyTo / setView updates
 function MapController({ center }) {
   const map = useMap();
   useEffect(() => {
@@ -27,16 +26,19 @@ function MapController({ center }) {
   return null;
 }
 
-export default function CreatePostPage() {
-  const { isAuthenticated } = useSelector(s => s.auth);
+export default function EditPostPage() {
+  const { id } = useParams();
+  const { isAuthenticated, user } = useSelector(s => s.auth);
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({ title: '', content: '', place_id: '', rating: 5 });
-  const [images, setImages] = useState([]);
-  const [previews, setPreviews] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
+  const [imagesToRemove, setImagesToRemove] = useState([]);
+  const [newImages, setNewImages] = useState([]);
+  const fileInputRef = useRef(null);
   const [places, setPlaces] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   
   // Location selection / Creation states
   const [showNewPlace, setShowNewPlace] = useState(false);
@@ -51,11 +53,40 @@ export default function CreatePostPage() {
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
-    placeAPI.getAll({ limit: 100 }).then(r => setPlaces(r.data.data.places || []));
-    categoryAPI.getAll().then(r => setCategories(r.data.data || []));
-  }, []);
+    
+    Promise.all([
+      placeAPI.getAll({ limit: 100 }),
+      categoryAPI.getAll(),
+      postAPI.getById(id)
+    ]).then(([placesRes, catRes, postRes]) => {
+      let fetchedPlaces = placesRes.data.data.places || [];
+      setCategories(catRes.data.data || []);
+      
+      const post = postRes.data.data;
+      if (post.place && !fetchedPlaces.find(p => String(p.id) === String(post.place.id))) {
+        fetchedPlaces = [post.place, ...fetchedPlaces];
+      }
+      setPlaces(fetchedPlaces);
+      if (String(post.user_id) !== String(user?.id) && user?.role !== 'admin') {
+        toast.error('Bạn không có quyền sửa bài viết này');
+        navigate('/profile');
+        return;
+      }
+      
+      setForm({
+        title: post.title || '',
+        content: post.content || '',
+        place_id: post.place?.id || '',
+        rating: post.rating || 5
+      });
+      setExistingImages(post.images || []);
+      setLoading(false);
+    }).catch(err => {
+      toast.error('Lỗi tải dữ liệu bài viết');
+      setLoading(false);
+    });
+  }, [id, isAuthenticated]);
 
-  // Search autocomplete effect from Nominatim
   useEffect(() => {
     if (searchQuery.trim().length < 3) {
       setSuggestions([]);
@@ -69,7 +100,6 @@ export default function CreatePostPage() {
         })
         .catch(err => console.error('Geocoding search error:', err));
     }, 600);
-
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
@@ -112,37 +142,7 @@ export default function CreatePostPage() {
           address: data.display_name || prev.address
         }));
       }
-    } catch (err) {
-      console.error('Reverse geocoding error:', err);
-    }
-  };
-
-  const handleImages = (e) => {
-    const files = Array.from(e.target.files);
-    
-    if (images.length + files.length > 5) {
-      toast.error('Tối đa chỉ được upload 5 ảnh');
-      return;
-    }
-
-    setImages(prev => {
-      const next = [...prev, ...files];
-      setPreviews(next.map(f => URL.createObjectURL(f)));
-      return next;
-    });
-
-    if (e.target) e.target.value = '';
-  };
-
-  const removeImage = (index) => {
-    setImages(prev => {
-      const next = prev.filter((_, idx) => idx !== index);
-      if (previews[index]) {
-        URL.revokeObjectURL(previews[index]);
-      }
-      setPreviews(next.map(f => URL.createObjectURL(f)));
-      return next;
-    });
+    } catch (err) {}
   };
 
   const handleCreatePlace = async () => {
@@ -161,24 +161,49 @@ export default function CreatePostPage() {
     }
   };
 
+  const handleNewImages = (e) => {
+    const files = Array.from(e.target.files);
+    if (existingImages.length - imagesToRemove.length + newImages.length + files.length > 5) {
+      return toast.error('Tối đa 5 hình ảnh');
+    }
+    setNewImages(prev => [...prev, ...files]);
+  };
+
+  const handleRemoveExistingImage = (imgId) => {
+    setImagesToRemove(prev => [...prev, imgId]);
+  };
+
+  const handleRemoveNewImage = (index) => {
+    setNewImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.content.trim()) return toast.error('Vui lòng nhập tiêu đề và nội dung');
-    setLoading(true);
+    setSaving(true);
     try {
       const fd = new FormData();
       fd.append('title', form.title);
       fd.append('content', form.content);
       if (form.place_id) fd.append('place_id', form.place_id);
       fd.append('rating', form.rating);
-      images.forEach(img => fd.append('images', img));
-      const res = await postAPI.create(fd);
-      toast.success('Tạo bài viết thành công!');
-      navigate(`/posts/${res.data.data.id}`);
+      
+      imagesToRemove.forEach(id => fd.append('images_to_remove', id));
+      newImages.forEach(img => fd.append('images', img));
+
+      await postAPI.update(id, fd);
+      toast.success('Cập nhật bài viết thành công!');
+      navigate(`/posts/${id}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Lỗi tạo bài viết');
-    } finally { setLoading(false); }
+      toast.error(err.response?.data?.message || 'Lỗi cập nhật bài viết');
+    } finally { setSaving(false); }
   };
+
+  if (loading) return (
+    <div className="pt-24 min-h-screen bg-[#f0f7ff] flex justify-center">
+      <div className="w-10 h-10 border-4 border-indigo-100 border-t-blue-600 rounded-full animate-spin mt-20"></div>
+    </div>
+  );
 
   return (
     <div className="pt-24 min-h-screen bg-[#f0f7ff]">
@@ -186,9 +211,9 @@ export default function CreatePostPage() {
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-indigo-100 animate-in">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2 mb-2">
-              <span className="text-3xl">✍️</span> Viết bài chia sẻ
+              <FiSave className="text-blue-600" /> Chỉnh sửa bài viết
             </h1>
-            <p className="text-slate-500">Chia sẻ trải nghiệm du lịch của bạn với cộng đồng</p>
+            <p className="text-slate-500">Cập nhật nội dung trải nghiệm của bạn</p>
           </div>
           
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -244,6 +269,15 @@ export default function CreatePostPage() {
                   <FiPlus /> Mới
                 </button>
               </div>
+              {form.place_id && places.find(p => String(p.id) === String(form.place_id)) && (
+                <div className="mt-3 p-4 bg-blue-50/50 border border-blue-100 rounded-xl flex items-start gap-3 animate-in">
+                  <div className="mt-1"><FiMapPin className="text-blue-500" /></div>
+                  <div>
+                    <div className="font-semibold text-slate-800 text-sm">{places.find(p => String(p.id) === String(form.place_id)).name}</div>
+                    <div className="text-xs text-slate-500 mt-1">{places.find(p => String(p.id) === String(form.place_id)).address || places.find(p => String(p.id) === String(form.place_id)).province}</div>
+                  </div>
+                </div>
+              )}
             </div>
             
             {showNewPlace && !form.place_id && (
@@ -382,48 +416,40 @@ export default function CreatePostPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1">
-                <FiImage /> Hình ảnh (tối đa 5 ảnh)
-              </label>
-              <div className="flex gap-3 flex-wrap items-center">
-                {previews.map((p, i) => (
-                  <div key={i} className="w-24 h-24 rounded-xl overflow-hidden border-2 border-indigo-50 shadow-sm relative group">
-                    <img src={p} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
-                    >
-                      <FiX size={12} />
-                    </button>
+              <label className="block text-sm font-semibold text-slate-700 mb-3">Hình ảnh (tối đa 5 ảnh)</label>
+              <div className="flex gap-3 flex-wrap">
+                {existingImages.filter(img => !imagesToRemove.includes(img.id)).map((img, i) => (
+                  <div key={`old-${i}`} className="w-24 h-24 rounded-xl overflow-hidden border-2 border-indigo-50 shadow-sm relative group">
+                    <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => handleRemoveExistingImage(img.id)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                   </div>
                 ))}
                 
-                {images.length < 5 && (
-                  <div
-                    onClick={() => fileInputRef.current.click()}
-                    className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-blue-400 flex items-center justify-center cursor-pointer transition-colors text-slate-400 hover:text-blue-500"
+                {newImages.map((file, i) => (
+                  <div key={`new-${i}`} className="w-24 h-24 rounded-xl overflow-hidden border-2 border-blue-200 shadow-sm relative group">
+                    <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => handleRemoveNewImage(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                  </div>
+                ))}
+                
+                {(existingImages.length - imagesToRemove.length + newImages.length) < 5 && (
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-blue-400 hover:text-blue-500 transition-colors bg-slate-50"
                   >
                     <FiPlus size={24} />
                   </div>
                 )}
               </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                multiple
-                onChange={handleImages}
-                className="hidden"
-              />
+              <input type="file" ref={fileInputRef} accept="image/*" multiple onChange={handleNewImages} className="hidden" />
             </div>
             
             <button 
               type="submit" 
               className="w-full py-4 mt-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2" 
-              disabled={loading}
+              disabled={saving}
             >
-              <FiSend size={20} /> {loading ? 'Đang đăng...' : 'Đăng bài viết'}
+              <FiSave size={20} /> {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
           </form>
         </div>

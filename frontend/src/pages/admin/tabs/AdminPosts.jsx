@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiSearch, FiEye, FiEyeOff, FiTrash2, FiExternalLink } from 'react-icons/fi';
 
@@ -60,11 +60,6 @@ export default function AdminPosts() {
 
   return (
     <div className="animate-in">
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>📝 Quản lý bài viết</h1>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: 4 }}>Kiểm duyệt ẩn bài viết vi phạm hoặc xóa bài viết xấu độc hại</p>
-      </div>
-
       {/* Filter panel */}
       <div style={{
         background: 'white',
@@ -105,101 +100,88 @@ export default function AdminPosts() {
       </div>
 
       {/* Posts table */}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-              <th style={{ padding: '14px 16px' }}>Bài đăng</th>
-              <th style={{ padding: '14px 16px' }}>Tác giả</th>
-              <th style={{ padding: '14px 16px' }}>Địa điểm</th>
-              <th style={{ padding: '14px 16px', textAlign: 'center' }}>Đánh giá</th>
-              <th style={{ padding: '14px 16px', textAlign: 'center' }}>Trạng thái</th>
-              <th style={{ padding: '14px 16px', textAlign: 'right' }}>Hành động</th>
+      <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-indigo-50">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Bài đăng</th>
+              <th className="px-4 py-3 font-semibold">Tác giả</th>
+              <th className="px-4 py-3 font-semibold">Địa điểm</th>
+              <th className="px-4 py-3 font-semibold text-center">Đánh giá</th>
+              <th className="px-4 py-3 font-semibold text-center">Trạng thái</th>
+              <th className="px-4 py-3 font-semibold text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-50">
             {loading ? (
               <tr>
-                <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu...</td>
+                <td colSpan={6} className="px-4 py-10 text-center text-slate-500 font-medium">Đang tải dữ liệu...</td>
               </tr>
             ) : posts.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Không tìm thấy bài viết phù hợp</td>
+                <td colSpan={6} className="px-4 py-10 text-center text-slate-500 font-medium">Không tìm thấy bài viết phù hợp</td>
               </tr>
             ) : posts.map(p => (
-              <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                 {/* Title */}
-                <td style={{ padding: '14px 16px', fontWeight: 600, color: '#0f172a', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <td className="px-4 py-3 font-semibold text-slate-800 max-w-[240px] truncate">
                   {p.title}
                 </td>
 
                 {/* Author */}
-                <td style={{ padding: '14px 16px', color: '#475569' }}>{p.author?.full_name || 'Không rõ'}</td>
+                <td className="px-4 py-3 text-slate-600 font-medium">
+                  {p.author?.full_name || 'Không rõ'}
+                </td>
 
                 {/* Place */}
-                <td style={{ padding: '14px 16px', color: '#475569' }}>{p.place ? `${p.place.name} (${p.place.province})` : 'N/A'}</td>
+                <td className="px-4 py-3 text-slate-600 text-xs truncate max-w-[200px]">
+                  {p.place ? `${p.place.name} (${p.place.province})` : 'N/A'}
+                </td>
 
                 {/* Rating */}
-                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 'bold', color: '#eab308' }}>
+                <td className="px-4 py-3 text-center font-bold text-amber-500">
                   {p.rating ? `⭐ ${p.rating}` : '—'}
                 </td>
 
                 {/* Status */}
-                <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                <td className="px-4 py-3 text-center">
                   {p.status === 'hidden' || p.is_hidden ? (
-                    <span style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '4px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 600 }}>Bị ẩn</span>
+                    <span className="bg-red-50 text-red-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Bị ẩn</span>
                   ) : p.status === 'draft' ? (
-                    <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 600 }}>Bản nháp</span>
+                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Bản nháp</span>
                   ) : (
-                    <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 600 }}>Hiển thị</span>
+                    <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Hiển thị</span>
                   )}
                 </td>
 
                 {/* Actions */}
-                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1.5 justify-end">
                     {/* View Details */}
                     <a
                       href={`/posts/${p.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-transparent rounded-lg hover:bg-blue-100 transition-colors"
                     >
-                      <FiExternalLink /> Xem
+                      <FiExternalLink size={14} /> Xem
                     </a>
 
                     {/* Toggle hide/show */}
                     <button
                       onClick={() => handleToggleVisibility(p.id, p.is_hidden)}
-                      className="btn btn-secondary btn-sm"
-                      style={{
-                        padding: '4px 8px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        borderColor: p.is_hidden ? '#e2e8f0' : '#cbd5e1'
-                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm"
                     >
-                      {p.is_hidden ? <FiEye /> : <FiEyeOff />}
-                      {p.is_hidden ? 'Hiện bài' : 'Ẩn bài'}
+                      {p.is_hidden ? <FiEye size={14} /> : <FiEyeOff size={14} />}
+                      {p.is_hidden ? 'Hiện' : 'Ẩn'}
                     </button>
 
                     {/* Delete */}
                     <button
                       onClick={() => handleDeletePost(p.id)}
-                      className="btn btn-sm"
-                      style={{
-                        padding: '4px 8px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        backgroundColor: '#fee2e2',
-                        color: '#dc2626',
-                        border: '1px solid #fecaca'
-                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm"
                     >
-                      <FiTrash2 /> Xóa
+                      <FiTrash2 size={14} /> Xóa
                     </button>
                   </div>
                 </td>

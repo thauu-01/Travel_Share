@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiSearch, FiX } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -196,17 +196,19 @@ export default function AdminPlaces() {
 
   return (
     <div className="animate-in">
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>📍 Quản lý địa điểm</h1>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: 4 }}>Thêm, sửa, hoặc xóa các địa danh du lịch trên toàn quốc</p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn btn-secondary" onClick={() => setShowMap(!showMap)}>
-            🗺️ {showMap ? 'Ẩn bản đồ' : 'Hiển thị bản đồ tổng'}
+      <div className="mb-6 flex justify-between items-center flex-wrap gap-3">
+        <div className="flex gap-3">
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-indigo-300 transition-all font-semibold shadow-sm text-sm"
+            onClick={() => setShowMap(!showMap)}
+          >
+            <span className="text-lg">🗺️</span> {showMap ? 'Ẩn bản đồ' : 'Hiển thị bản đồ tổng'}
           </button>
-          <button className="btn btn-primary" onClick={handleOpenCreate}>
-            <FiPlus /> Thêm địa điểm
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold shadow-sm shadow-blue-600/20 text-sm"
+            onClick={handleOpenCreate}
+          >
+            <FiPlus size={18} /> Thêm địa điểm
           </button>
         </div>
       </div>
@@ -289,20 +291,18 @@ export default function AdminPlaces() {
                   ★ {p.avg_rating?.toFixed(1) || '0.0'}
                 </td>
                 <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <div className="flex items-center gap-2 justify-end">
                     <button
                       onClick={() => handleOpenEdit(p)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm"
                     >
-                      <FiEdit2 /> Sửa
+                      <FiEdit2 size={14} /> Sửa
                     </button>
                     <button
                       onClick={() => handleDelete(p.id)}
-                      className="btn btn-sm"
-                      style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm"
                     >
-                      <FiTrash2 /> Xóa
+                      <FiTrash2 size={14} /> Xóa
                     </button>
                   </div>
                 </td>
