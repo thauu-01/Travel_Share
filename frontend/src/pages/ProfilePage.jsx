@@ -38,6 +38,7 @@ export default function ProfilePage() {
     try {
       const res = await userAPI.getProfile(targetId);
       setProfile(res.data.data);
+      if (res.data.data?.full_name) document.title = `Hồ sơ ${res.data.data.full_name} | TravelShare`;
       setForm({ full_name: res.data.data.full_name, bio: res.data.data.bio || '' });
     } catch (err) { toast.error('Không tìm thấy người dùng'); }
     setLoading(false);
@@ -261,7 +262,7 @@ export default function ProfilePage() {
                     onChange={e => setForm({...form, bio: e.target.value})} 
                   />
                 </div>
-                <button type="submit" className="px-6 py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors border-none cursor-pointer shadow-sm shadow-blue-600/20">
+                <button type="submit" className="px-5 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors border-none cursor-pointer shadow-sm shadow-blue-600/20">
                   Lưu thay đổi
                 </button>
               </form>

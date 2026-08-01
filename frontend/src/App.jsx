@@ -30,6 +30,64 @@ import AdminReports from './pages/admin/tabs/AdminReports';
 import AdminNotifications from './pages/admin/tabs/AdminNotifications';
 import AdminSupport from './pages/admin/tabs/AdminSupport';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]);
+  return null;
+}
+
+function PageTitleUpdater() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    let title = 'TravelShare - Chia sẻ & Khám phá Du lịch Việt Nam';
+
+    if (pathname === '/') {
+      title = 'Trang chủ | TravelShare';
+    } else if (pathname === '/explore') {
+      title = 'Khám phá Bản đồ | TravelShare';
+    } else if (pathname === '/search') {
+      title = 'Tìm kiếm & Lọc bài viết | TravelShare';
+    } else if (pathname === '/trips') {
+      title = 'Lịch trình chuyến đi | TravelShare';
+    } else if (pathname === '/create-post') {
+      title = 'Đăng bài viết mới | TravelShare';
+    } else if (pathname.startsWith('/posts/') && pathname.endsWith('/edit')) {
+      title = 'Chỉnh sửa bài viết | TravelShare';
+    } else if (pathname.startsWith('/posts/')) {
+      title = 'Chi tiết bài viết | TravelShare';
+    } else if (pathname === '/login') {
+      title = 'Đăng nhập | TravelShare';
+    } else if (pathname === '/register') {
+      title = 'Đăng ký tài khoản | TravelShare';
+    } else if (pathname.startsWith('/profile')) {
+      title = 'Hồ sơ cá nhân | TravelShare';
+    } else if (pathname === '/admin') {
+      title = 'Tổng quan Hệ thống | Admin TravelShare';
+    } else if (pathname === '/admin/users') {
+      title = 'Quản lý Người dùng | Admin TravelShare';
+    } else if (pathname === '/admin/posts') {
+      title = 'Quản lý Bài viết | Admin TravelShare';
+    } else if (pathname === '/admin/places') {
+      title = 'Quản lý Địa điểm | Admin TravelShare';
+    } else if (pathname === '/admin/categories') {
+      title = 'Quản lý Danh mục | Admin TravelShare';
+    } else if (pathname === '/admin/comments') {
+      title = 'Quản lý Bình luận | Admin TravelShare';
+    } else if (pathname === '/admin/reports') {
+      title = 'Xử lý Báo cáo | Admin TravelShare';
+    } else if (pathname === '/admin/notifications') {
+      title = 'Phát sóng Thông báo | Admin TravelShare';
+    } else if (pathname === '/admin/support') {
+      title = 'Hỗ trợ CSKH | Admin TravelShare';
+    }
+
+    document.title = title;
+  }, [pathname]);
+
+  return null;
+}
+
 function AppContent() {
   const location = useLocation();
   const { user, isAuthenticated } = useSelector(state => state.auth);
@@ -101,6 +159,8 @@ function AppContent() {
 
   return (
     <>
+      <ScrollToTop />
+      <PageTitleUpdater />
       {!hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<HomePage />} />

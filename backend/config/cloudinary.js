@@ -9,17 +9,28 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const storage = new CloudinaryStorage({
+// --- Storage for user avatars ---
+const avatarStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'travelshare',
-    transformation: [{ width: 1200, height: 800, crop: 'limit', quality: 'auto' }]
+    folder: 'travelshare/avatars',
+    transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face', quality: 'auto' }]
   }
 });
 
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+// --- Dynamic storage for post & place images (grouped by post_id) ---
+const postStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    const postId = req.params?.id || req.body?.post_id || 'temp';
+    return {
+      folder: `travelshare/posts/${postId}`,
+      transformation: [{ width: 1200, height: 800, crop: 'limit', quality: 'auto' }]
+    };
+  }
 });
 
-module.exports = { cloudinary, upload };
+const uploadAvatar = multer({ storage: avatarStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+const uploadPost   = multer({ storage: postStorage,   limits: { fileSize: 10 * 1024 * 1024 } });
+
+module.exports = { cloudinary, uploadAvatar, uploadPost };

@@ -1,82 +1,116 @@
 import { Link } from 'react-router-dom';
-import { FiFacebook, FiInstagram, FiTwitter, FiMapPin, FiMail, FiPhone } from 'react-icons/fi';
+import { FiFacebook, FiInstagram, FiTwitter, FiMapPin, FiMail, FiPhone, FiArrowRight } from 'react-icons/fi';
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-indigo-100 pt-10 pb-6 mt-8">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-8">
+    <footer className="relative bg-slate-900 text-white mt-12 overflow-hidden">
+      {/* Top gradient accent */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-60" />
+
+      {/* Background decorations */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-72 h-72 bg-indigo-600/5 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative max-w-7xl mx-auto px-6 pt-16 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+
           {/* Brand */}
-          <div>
-            <Link to="/" className="text-xl font-extrabold text-blue-600 mb-3 inline-block">
-              TravelShare
+          <div className="lg:col-span-1">
+            <Link to="/" className="inline-flex items-center gap-2 text-xl font-extrabold text-white mb-4">
+              <span className="text-2xl">✈️</span>
+              <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">TravelShare</span>
             </Link>
-            <p className="text-slate-500 text-sm leading-snug mb-5">
+            <p className="text-slate-400 text-sm leading-relaxed mb-6">
               Mạng xã hội chia sẻ trải nghiệm du lịch lớn nhất Việt Nam. Cùng khám phá những vùng đất mới, con người mới và văn hóa mới.
             </p>
-            <div className="flex gap-3">
-              <a href="#" className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">
-                <FiFacebook size={16} />
-              </a>
-              <a href="#" className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">
-                <FiInstagram size={16} />
-              </a>
-              <a href="#" className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">
-                <FiTwitter size={16} />
-              </a>
+            <div className="flex gap-2.5">
+              {[
+                { Icon: FiFacebook, label: 'Facebook' },
+                { Icon: FiInstagram, label: 'Instagram' },
+                { Icon: FiTwitter, label: 'Twitter' }
+              ].map(({ Icon, label }) => (
+                <a
+                  key={label}
+                  href="#"
+                  aria-label={label}
+                  className="w-9 h-9 rounded-xl bg-white/5 hover:bg-blue-600 border border-white/10 hover:border-blue-600 text-slate-400 hover:text-white flex items-center justify-center transition-all duration-200"
+                >
+                  <Icon size={15} />
+                </a>
+              ))}
             </div>
           </div>
 
           {/* Khám phá */}
           <div>
-            <h3 className="font-bold text-slate-900 mb-4 text-base">Khám phá</h3>
-            <ul className="flex flex-col gap-2 text-sm">
-              <li><Link to="/explore" className="text-slate-500 hover:text-blue-600 transition-colors">Bản đồ du lịch</Link></li>
-              <li><Link to="/search" className="text-slate-500 hover:text-blue-600 transition-colors">Tìm kiếm địa điểm</Link></li>
-              <li><Link to="/trips" className="text-slate-500 hover:text-blue-600 transition-colors">Lập kế hoạch</Link></li>
-              <li><Link to="/" className="text-slate-500 hover:text-blue-600 transition-colors">Bài viết nổi bật</Link></li>
+            <h3 className="font-bold text-white mb-5 text-sm uppercase tracking-wider">Khám phá</h3>
+            <ul className="space-y-3 text-sm">
+              {[
+                { to: '/explore', label: 'Bản đồ du lịch' },
+                { to: '/search', label: 'Tìm kiếm địa điểm' },
+                { to: '/trips', label: 'Lập kế hoạch' },
+                { to: '/', label: 'Bài viết nổi bật' },
+              ].map(({ to, label }) => (
+                <li key={label}>
+                  <Link to={to} className="text-slate-400 hover:text-white flex items-center gap-2 group transition-colors">
+                    <FiArrowRight size={12} className="opacity-0 group-hover:opacity-100 -ml-4 group-hover:ml-0 transition-all" />
+                    {label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Hỗ trợ */}
           <div>
-            <h3 className="font-bold text-slate-900 mb-4 text-base">Hỗ trợ</h3>
-            <ul className="flex flex-col gap-2 text-sm">
-              <li><a href="#" className="text-slate-500 hover:text-blue-600 transition-colors">Trung tâm trợ giúp</a></li>
-              <li><a href="#" className="text-slate-500 hover:text-blue-600 transition-colors">Quy định chung</a></li>
-              <li><a href="#" className="text-slate-500 hover:text-blue-600 transition-colors">Chính sách bảo mật</a></li>
-              <li><a href="#" className="text-slate-500 hover:text-blue-600 transition-colors">Điều khoản sử dụng</a></li>
+            <h3 className="font-bold text-white mb-5 text-sm uppercase tracking-wider">Hỗ trợ</h3>
+            <ul className="space-y-3 text-sm">
+              {['Trung tâm trợ giúp', 'Quy định chung', 'Chính sách bảo mật', 'Điều khoản sử dụng'].map(label => (
+                <li key={label}>
+                  <a href="#" className="text-slate-400 hover:text-white flex items-center gap-2 group transition-colors">
+                    <FiArrowRight size={12} className="opacity-0 group-hover:opacity-100 -ml-4 group-hover:ml-0 transition-all" />
+                    {label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Liên hệ */}
           <div>
-            <h3 className="font-bold text-slate-900 mb-4 text-base">Liên hệ</h3>
-            <ul className="flex flex-col gap-2.5 text-sm">
-              <li className="flex items-start gap-2 text-slate-500">
-                <FiMapPin className="text-blue-600 mt-0.5 shrink-0" size={14} />
+            <h3 className="font-bold text-white mb-5 text-sm uppercase tracking-wider">Liên hệ</h3>
+            <ul className="space-y-3.5 text-sm">
+              <li className="flex items-start gap-3 text-slate-400">
+                <div className="w-7 h-7 rounded-lg bg-blue-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <FiMapPin size={13} className="text-blue-400" />
+                </div>
                 <span>123 Đường Du Lịch, Quận Trung Tâm, TP. Hà Nội</span>
               </li>
-              <li className="flex items-center gap-2 text-slate-500">
-                <FiMail className="text-blue-600 shrink-0" size={14} />
+              <li className="flex items-center gap-3 text-slate-400">
+                <div className="w-7 h-7 rounded-lg bg-blue-600/20 flex items-center justify-center shrink-0">
+                  <FiMail size={13} className="text-blue-400" />
+                </div>
                 <span>contact@travelshare.vn</span>
               </li>
-              <li className="flex items-center gap-2 text-slate-500">
-                <FiPhone className="text-blue-600 shrink-0" size={14} />
+              <li className="flex items-center gap-3 text-slate-400">
+                <div className="w-7 h-7 rounded-lg bg-blue-600/20 flex items-center justify-center shrink-0">
+                  <FiPhone size={13} className="text-blue-400" />
+                </div>
                 <span>1900 1234</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-indigo-50 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-slate-400 text-xs">
-            &copy; {new Date().getFullYear()} TravelShare. All rights reserved.
+        {/* Bottom bar */}
+        <div className="border-t border-white/5 pt-7 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-slate-500 text-xs">
+            © {new Date().getFullYear()} TravelShare. All rights reserved. Made with ❤️ in Vietnam.
           </p>
           <div className="flex gap-6 text-xs">
-            <a href="#" className="text-slate-400 hover:text-blue-600">Privacy</a>
-            <a href="#" className="text-slate-400 hover:text-blue-600">Terms</a>
-            <a href="#" className="text-slate-400 hover:text-blue-600">Cookies</a>
+            {['Privacy', 'Terms', 'Cookies'].map(label => (
+              <a key={label} href="#" className="text-slate-500 hover:text-slate-300 transition-colors">{label}</a>
+            ))}
           </div>
         </div>
       </div>

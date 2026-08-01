@@ -1,10 +1,13 @@
-const { upload } = require('../config/cloudinary');
+const { uploadAvatar, uploadPost } = require('../config/cloudinary');
 
-// Upload single image
-const uploadSingle = upload.single('image');
+// Avatar (single image for user profile) -> travelshare/avatars/
+const uploadSingle = uploadAvatar.single('image');
 
-// Upload multiple images (max 5)
-const uploadMultiple = upload.array('images', 5);
+// Post & place images (multiple, max 5) -> travelshare/posts/{id}/
+const uploadMultiple = uploadPost.array('images', 5);
+
+// Place cover (single) -> also goes to travelshare/posts/temp/ or posts/{id}/
+const uploadPlaceSingle = uploadPost.single('image');
 
 // Error handling middleware for multer
 const handleUploadError = (err, req, res, next) => {
@@ -29,4 +32,4 @@ const handleUploadError = (err, req, res, next) => {
   next();
 };
 
-module.exports = { uploadSingle, uploadMultiple, handleUploadError };
+module.exports = { uploadSingle, uploadMultiple, uploadPlaceSingle, handleUploadError };

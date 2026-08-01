@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { postAPI, placeAPI, categoryAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { FiSave, FiMapPin, FiPlus } from 'react-icons/fi';
+import { FiSave, FiMapPin, FiPlus, FiArrowLeft } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -210,6 +210,14 @@ export default function EditPostPage() {
       <div className="max-w-3xl mx-auto px-6 pb-12">
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-indigo-100 animate-in">
           <div className="mb-8">
+            <button
+              type="button"
+              onClick={() => navigate('/profile')}
+              className="flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors mb-4 group"
+            >
+              <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" />
+              Quay lại hồ sơ
+            </button>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2 mb-2">
               <FiSave className="text-blue-600" /> Chỉnh sửa bài viết
             </h1>
@@ -444,13 +452,22 @@ export default function EditPostPage() {
               <input type="file" ref={fileInputRef} accept="image/*" multiple onChange={handleNewImages} className="hidden" />
             </div>
             
-            <button 
-              type="submit" 
-              className="w-full py-4 mt-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2" 
-              disabled={saving}
-            >
-              <FiSave size={20} /> {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </button>
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+              >
+                <FiArrowLeft size={16} /> Quay lại hồ sơ
+              </button>
+              <button 
+                type="submit" 
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2" 
+                disabled={saving}
+              >
+                <FiSave size={16} /> {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
           </form>
         </div>
       </div>

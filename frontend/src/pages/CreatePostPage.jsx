@@ -420,10 +420,10 @@ export default function CreatePostPage() {
             
             <button 
               type="submit" 
-              className="w-full py-4 mt-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2" 
+              className="w-full py-2.5 mt-4 rounded-xl font-semibold text-sm bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2" 
               disabled={loading}
             >
-              <FiSend size={20} /> {loading ? 'Đang đăng...' : 'Đăng bài viết'}
+              <FiSend size={16} /> {loading ? 'Đang đăng...' : 'Đăng bài viết'}
             </button>
           </form>
         </div>

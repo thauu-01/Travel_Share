@@ -28,6 +28,7 @@ export default function PostDetailPage() {
       const res = await postAPI.getById(id);
       const p = res.data.data;
       setPost(p);
+      if (p?.title) document.title = `${p.title} | TravelShare`;
       setComments(p.comments || []);
       setLikeCount(p.likes?.length || 0);
       setLiked(user ? p.likes?.some(l => l.user_id === user.id) : false);
