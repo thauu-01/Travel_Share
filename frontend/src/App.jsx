@@ -17,6 +17,7 @@ import ExplorePage from './pages/ExplorePage';
 import TripPlannerPage from './pages/TripPlannerPage';
 import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 // Admin imports
 import AdminLayout from './pages/admin/AdminLayout';
@@ -60,6 +61,8 @@ function PageTitleUpdater() {
       title = 'Đăng nhập | TravelShare';
     } else if (pathname === '/register') {
       title = 'Đăng ký tài khoản | TravelShare';
+    } else if (pathname === '/forgot-password') {
+      title = 'Quên mật khẩu | TravelShare';
     } else if (pathname.startsWith('/profile')) {
       title = 'Hồ sơ cá nhân | TravelShare';
     } else if (pathname === '/admin') {
@@ -92,16 +95,16 @@ function AppContent() {
   const location = useLocation();
   const { user, isAuthenticated } = useSelector(state => state.auth);
   const hideNavbar = location.pathname.startsWith('/admin');
-  const showSupportButton = isAuthenticated && user?.role !== 'admin';
+  const showSupportButton = user?.role !== 'admin';
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { id: 1, sender: 'admin', text: 'Xin chào! Tôi có thể hỗ trợ bạn. Bạn cần giúp gì?' }
+    { id: 1, sender: 'admin', text: 'Xin chào! Mình là trợ lý AI TravelShare ✈️. Mình có thể hỗ trợ gì cho bạn?' }
   ]);
   const [draft, setDraft] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!isChatOpen || !showSupportButton) return;
+    if (!isChatOpen || !showSupportButton || !isAuthenticated) return;
 
     const fetchHistory = async () => {
       try {
@@ -121,7 +124,7 @@ function AppContent() {
     };
 
     fetchHistory();
-  }, [isChatOpen, showSupportButton]);
+  }, [isChatOpen, showSupportButton, isAuthenticated]);
 
   const handleSupportClick = () => {
     setIsChatOpen(prev => !prev);
@@ -174,6 +177,7 @@ function AppContent() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/:id" element={<ProfilePage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout />}>

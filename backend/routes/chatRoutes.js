@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const chatController = require('../controllers/ChatController');
 const admin = require('../controllers/AdminController');
-const { authenticate, requireAdmin } = require('../middlewares/auth');
+const { authenticate, optionalAuth, requireAdmin } = require('../middlewares/auth');
 
-// User support chat routes
-router.get('/history', authenticate, chatController.getHistory);
-router.post('/send', authenticate, chatController.sendMessage);
+// User & Guest support chat routes
+router.get('/history', optionalAuth, chatController.getHistory);
+router.post('/send', optionalAuth, chatController.sendMessage);
 
 // Admin support chat management routes
 router.get('/admin/threads', authenticate, requireAdmin, admin.getSupportChats);

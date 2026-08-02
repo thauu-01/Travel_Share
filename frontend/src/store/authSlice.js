@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { authAPI } from '../services/api';
 
 const user = JSON.parse(localStorage.getItem('user') || 'null');
 const token = localStorage.getItem('token');
@@ -24,13 +25,20 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       localStorage.removeItem('user');
       localStorage.removeItem('token');
+      // Xóa refresh token cookie phía server
+      authAPI.logout().catch(() => {});
     },
     updateUser: (state, action) => {
       state.user = { ...state.user, ...action.payload };
       localStorage.setItem('user', JSON.stringify(state.user));
     },
+    // Cập nhật access token mới (sau khi refresh)
+    setToken: (state, action) => {
+      state.token = action.payload;
+      localStorage.setItem('token', action.payload);
+    },
   },
 });
 
-export const { loginSuccess, logout, updateUser } = authSlice.actions;
+export const { loginSuccess, logout, updateUser, setToken } = authSlice.actions;
 export default authSlice.reducer;

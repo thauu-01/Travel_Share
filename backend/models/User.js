@@ -9,7 +9,9 @@ const userSchema = new mongoose.Schema({
   avatar_url: { type: String, default: null },
   bio: { type: String, default: null },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  is_active: { type: Boolean, default: true }
+  is_active: { type: Boolean, default: true },
+  otp_code: { type: String, default: null },
+  otp_expires_at: { type: Date, default: null }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
   toJSON: { virtuals: true },

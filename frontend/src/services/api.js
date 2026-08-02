@@ -2,25 +2,84 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: 'http://localhost:5000/api',
-  headers: { 'Content-Type': 'application/json' }
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true  // Required to send/receive httpOnly refresh token cookie
 });
 
+// Request interceptor: attach access token
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
+// Track whether a refresh is already in progress to avoid duplicate calls
+let isRefreshing = false;
+let failedQueue = [];
+
+function processQueue(error, token = null) {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+}
+
+// Response interceptor: auto-refresh on 401 TokenExpiredError
 API.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If 401 and haven't retried yet — try refreshing
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // If already trying to refresh, queue request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return API(originalRequest);
+        }).catch(err => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Call /auth/refresh — sends httpOnly cookie automatically
+        const res = await axios.post(
+          'http://localhost:5000/api/auth/refresh',
+          {},
+          { withCredentials: true }
+        );
+        const { token, user } = res.data.data;
+
+        // Save new access token
+        localStorage.setItem('token', token);
+        if (user) localStorage.setItem('user', JSON.stringify(user));
+
+        // Retry all queued requests
+        processQueue(null, token);
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return API(originalRequest);
+      } catch (refreshError) {
+        // Refresh token also expired → force logout
+        processQueue(refreshError, null);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   }
 );
@@ -28,7 +87,12 @@ API.interceptors.response.use(
 export const authAPI = {
   login: (data) => API.post('/auth/login', data),
   register: (data) => API.post('/auth/register', data),
+  refresh: () => API.post('/auth/refresh'),
+  logout: () => API.post('/auth/logout'),
   getMe: () => API.get('/auth/me'),
+  forgotPassword: (data) => API.post('/auth/forgot-password', data),
+  verifyOtp: (data) => API.post('/auth/verify-otp', data),
+  resetPassword: (data) => API.post('/auth/reset-password', data),
 };
 
 export const postAPI = {

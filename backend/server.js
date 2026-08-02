@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const cookieParser = require('cookie-parser');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
@@ -21,6 +22,8 @@ const reportRoutes = require('./routes/reportRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const setupSocket = require('./sockets/notification');
 
+const { globalLimiter, authLimiter, chatLimiter } = require('./middlewares/rateLimiter');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -34,6 +37,7 @@ app.set('io', io);
 // Middleware
 app.use(express.json({ charset: 'utf8' }));
 app.use(express.urlencoded({ extended: true, charset: 'utf8' }));
+app.use(cookieParser());
 app.use((req, res, next) => {
   res.set('Content-Type', 'application/json; charset=utf-8');
   next();
@@ -41,11 +45,15 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true  // Required for httpOnly cookies
 }));
 
+// Apply global rate limiter to all API endpoints
+app.use('/api', globalLimiter);
+
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/posts/:postId/comments', commentRoutes);
 app.use('/api/places', placeRoutes);
@@ -54,7 +62,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/recommendations', recommendationRoutes);
-app.use('/api/chat', chatRoutes);
+app.use('/api/chat', chatLimiter, chatRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/stats', statsRoutes);
