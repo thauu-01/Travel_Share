@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { store } from '../store';
+import { logout } from '../store/authSlice';
 
 const API = axios.create({
   baseURL: 'http://localhost:5000/api',
@@ -34,8 +36,11 @@ API.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Skip refresh for auth endpoints (avoid infinite loop)
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/');
+
     // If 401 and haven't retried yet — try refreshing
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       // If already trying to refresh, queue request
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -67,13 +72,9 @@ API.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${token}`;
         return API(originalRequest);
       } catch (refreshError) {
-        // Refresh token also expired → force logout
+        // Refresh token expired/missing → dispatch Redux logout cleanly
         processQueue(refreshError, null);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
+        store.dispatch(logout());
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

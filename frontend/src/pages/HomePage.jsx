@@ -82,60 +82,99 @@ export default function HomePage() {
   return (
     <div className="pt-16 min-h-screen">
       {/* HERO CAROUSEL */}
-      <section className="relative w-full h-[75vh] min-h-[500px] overflow-hidden bg-slate-900 group">
+      <section className="relative w-full h-[75vh] min-h-[520px] max-h-[700px] overflow-hidden bg-slate-950 group">
+        {/* Slides Container */}
         <div
-          className="flex h-full transition-transform duration-700 ease-out"
+          className="flex h-full transition-transform duration-700 cubic-bezier(0.25, 1, 0.5, 1)"
           style={{ transform: `translateX(-${currentSlide * 100}%)` }}
         >
-          {heroSlides.map((slide) => (
-            <div key={slide.id} className="w-full h-full shrink-0 relative">
-              <img src={slide.image} alt={slide.title} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+          {heroSlides.map((slide, idx) => {
+            const isActive = currentSlide === idx;
+            return (
+              <div key={slide.id} className="w-full h-full shrink-0 relative overflow-hidden">
+                {/* Background Image with Ken-Burns slow zoom when active */}
+                <img
+                  src={slide.image}
+                  alt={slide.title}
+                  className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-out ${
+                    isActive ? 'scale-110' : 'scale-100'
+                  }`}
+                />
+                
+                {/* Dark Vignette & Gradient Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/50 to-slate-950/40" />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 via-transparent to-slate-950/60" />
 
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-                <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-4 text-white drop-shadow-lg">
-                  {slide.title}<br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-200">{slide.highlight}</span>
-                </h1>
-                <p className="text-lg md:text-xl text-slate-200 leading-relaxed mb-8 max-w-2xl drop-shadow">
-                  {slide.desc}
-                </p>
-                <div className="flex gap-4 justify-center flex-wrap">
-                  <Link to="/explore" className="inline-flex items-center gap-2 py-3 px-8 rounded-xl font-bold text-base cursor-pointer transition-all border border-transparent bg-blue-600 text-white hover:bg-blue-500 shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1">
-                    🗺️ Khám phá bản đồ
-                  </Link>
-                  {!isAuthenticated && (
-                    <Link to="/register" className="inline-flex items-center gap-2 py-3 px-8 rounded-xl font-bold text-base cursor-pointer transition-all border-2 border-white/80 bg-black/30 backdrop-blur-md text-white hover:bg-white hover:text-slate-900 shadow-lg hover:-translate-y-1">
-                      Tham gia ngay
+                {/* Animated Text Content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 z-10">
+                  {/* Floating Tag */}
+                  <div key={`tag-${currentSlide}`} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-semibold uppercase tracking-wider mb-5 animate-hero-up">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                    Du lịch &amp; Khám phá Việt Nam
+                  </div>
+
+                  {/* Main Title with slide-up animation */}
+                  <h1 key={`title-${currentSlide}`} className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-4 text-white drop-shadow-2xl max-w-4xl animate-hero-up delay-1">
+                    {slide.title}<br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-sky-300">
+                      {slide.highlight}
+                    </span>
+                  </h1>
+
+                  {/* Subtitle / Description */}
+                  <p key={`desc-${currentSlide}`} className="text-base sm:text-lg md:text-xl text-slate-200 leading-relaxed mb-8 max-w-2xl drop-shadow animate-hero-up delay-2 font-normal">
+                    {slide.desc}
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div key={`btn-${currentSlide}`} className="flex gap-4 justify-center flex-wrap animate-hero-up delay-3">
+                    <Link
+                      to="/explore"
+                      className="inline-flex items-center gap-2.5 py-3.5 px-8 rounded-xl font-bold text-base cursor-pointer transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-1 border-none"
+                    >
+                      🗺️ Khám phá bản đồ
                     </Link>
-                  )}
+                    <Link
+                      to="/search"
+                      className="inline-flex items-center gap-2 py-3.5 px-7 rounded-xl font-bold text-base cursor-pointer transition-all border border-white/30 bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-slate-900 shadow-lg hover:-translate-y-1"
+                    >
+                      🔍 Tìm địa điểm
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Carousel Controls */}
+        {/* Carousel Prev/Next Controls */}
         <button
           onClick={prevSlide}
-          className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/20 hover:bg-black/50 text-white backdrop-blur-md flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none"
+          className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/40 hover:bg-slate-900/80 text-white backdrop-blur-md flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer border border-white/10 z-20 hover:scale-110"
+          aria-label="Slide trước"
         >
           <FiChevronLeft size={24} />
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/20 hover:bg-black/50 text-white backdrop-blur-md flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer border-none"
+          className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/40 hover:bg-slate-900/80 text-white backdrop-blur-md flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer border border-white/10 z-20 hover:scale-110"
+          aria-label="Slide tiếp theo"
         >
           <FiChevronRight size={24} />
         </button>
 
-        {/* Pagination Dots */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
+        {/* Dynamic Pagination Pill Indicators */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 z-20">
           {heroSlides.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
-              className={`w-3 h-3 rounded-full transition-all border-none cursor-pointer p-0 ${currentSlide === idx ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'}`}
+              className={`transition-all duration-500 rounded-full border-none cursor-pointer p-0 ${
+                currentSlide === idx
+                  ? 'w-8 h-2.5 bg-blue-500 shadow-lg shadow-blue-500/50'
+                  : 'w-2.5 h-2.5 bg-white/40 hover:bg-white/80'
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
             />
           ))}
         </div>

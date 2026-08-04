@@ -67,18 +67,26 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
-@keyframes shimmer {
-  from { background-position: -200% 0; }
-  to   { background-position: 200% 0; }
+@keyframes heroSlideUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes kenBurns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
 }
 
 .animate-in      { animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-fade-in { animation: fadeIn 0.4s ease both; }
 .animate-scale-in{ animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-hero-up { animation: heroSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-ken-burns { animation: kenBurns 8s ease-out infinite alternate; }
 
-.delay-1 { animation-delay: 0.08s; opacity: 0; }
-.delay-2 { animation-delay: 0.16s; opacity: 0; }
-.delay-3 { animation-delay: 0.24s; opacity: 0; }
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
 
 /* ===== SKELETON SHIMMER ===== */
 .skeleton {

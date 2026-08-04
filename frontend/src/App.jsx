@@ -37,6 +37,20 @@ function ScrollToTop() {
   return null;
 }
 
+// Lắng nghe sự kiện auth:logout từ axios interceptor → redirect về /login
+function AuthGuard() {
+  useEffect(() => {
+    const handleForceLogout = () => {
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    };
+    window.addEventListener('auth:logout', handleForceLogout);
+    return () => window.removeEventListener('auth:logout', handleForceLogout);
+  }, []);
+  return null;
+}
+
 function PageTitleUpdater() {
   const { pathname } = useLocation();
 
@@ -163,6 +177,7 @@ function AppContent() {
   return (
     <>
       <ScrollToTop />
+      <AuthGuard />
       <PageTitleUpdater />
       {!hideNavbar && <Navbar />}
       <Routes>

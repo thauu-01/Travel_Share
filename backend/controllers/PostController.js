@@ -26,16 +26,55 @@ class PostController {
       }
 
       if (search) {
-        const keywords = search.split(/\s+/).filter(k => k.trim());
+        const keywords = search.trim().split(/\s+/).filter(k => k);
         if (keywords.length > 0) {
-          where.$and = keywords.map(kw => ({
-            $or: [
-              { title: { $regex: kw, $options: 'i' } },
-              { content: { $regex: kw, $options: 'i' } }
-            ]
-          }));
+          // Build regex for each keyword
+          const keywordRegexes = keywords.map(kw => new RegExp(kw, 'i'));
+
+          // Stage 1: Find matching places (name, province, address)
+          const matchingPlaceIds = await Place.find({
+            $or: keywordRegexes.flatMap(re => [
+              { name: re },
+              { province: re },
+              { address: re },
+              { description: re }
+            ])
+          }).select('_id').then(places => places.map(p => p._id));
+
+          // Stage 2: Find matching users (author name)
+          const matchingUserIds = await require('../models/User').find({
+            full_name: { $in: keywordRegexes }
+          }).select('_id').then(users => users.map(u => u._id));
+
+          // Combine: post title OR content OR matching place OR matching author
+          const searchConditions = keywords.map(kw => {
+            const re = new RegExp(kw, 'i');
+            const orClauses = [
+              { title: re },
+              { content: re },
+            ];
+            if (matchingPlaceIds.length > 0) orClauses.push({ place_id: { $in: matchingPlaceIds } });
+            if (matchingUserIds.length > 0) orClauses.push({ user_id: { $in: matchingUserIds } });
+            return { $or: orClauses };
+          });
+
+          // Merge with existing province/category filter on place_id
+          if (where.place_id) {
+            // Already filtered by place — intersect: place must match filter AND keyword
+            const filteredPlaceIds = where.place_id.$in;
+            const intersection = matchingPlaceIds.filter(id => filteredPlaceIds.includes(id));
+            // Search in title/content OR in the intersected places
+            where.$or = [
+              { $and: searchConditions },
+              { place_id: { $in: intersection } }
+            ];
+            delete where.place_id;
+          } else {
+            where.$and = searchConditions;
+          }
         }
       }
+
 
       let sortObj = { created_at: -1 };
       if (sort === 'popular') sortObj = { view_count: -1 };

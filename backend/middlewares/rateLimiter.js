@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // 1. Global API rate limiter - Áp dụng cho toàn bộ /api
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 300, // Tối đa 300 request / 15 phút / IP
+  max: 2000, // Tăng lên 2000 request / 15 phút / IP cho trải nghiệm mượt mà
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -15,7 +15,7 @@ const globalLimiter = rateLimit({
 // 2. Auth rate limiter - Áp dụng cho Đăng nhập & Đăng ký (chống Brute force)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 15, // Tối đa 15 lần thử / 15 phút / IP
+  max: 60, // Tối đa 60 lần thử / 15 phút / IP
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -24,10 +24,10 @@ const authLimiter = rateLimit({
   }
 });
 
-// 3. Chat rate limiter - Áp dụng cho Chat AI / Hỗ trợ CSKH (tránh quá tải Gemini AI API)
+// 3. Chat rate limiter - Áp dụng cho Chat AI / Hỗ trợ CSKH
 const chatLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 phút
-  max: 30, // Tối đa 30 tin nhắn / 10 phút / IP
+  max: 100, // Tối đa 100 tin nhắn / 10 phút / IP
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -39,7 +39,7 @@ const chatLimiter = rateLimit({
 // 4. Create Content limiter - Áp dụng cho Đăng bài, Bình luận, Báo cáo (chống Spam)
 const createContentLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 phút
-  max: 20, // Tối đa 20 nội dung / 10 phút / IP
+  max: 100, // Tối đa 100 nội dung / 10 phút / IP
   standardHeaders: true,
   legacyHeaders: false,
   message: {

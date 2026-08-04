@@ -27,6 +27,8 @@ const authSlice = createSlice({
       localStorage.removeItem('token');
       // Xóa refresh token cookie phía server
       authAPI.logout().catch(() => {});
+      // Phát sự kiện để App.jsx chuyển về /login
+      window.dispatchEvent(new CustomEvent('auth:logout'));
     },
     updateUser: (state, action) => {
       state.user = { ...state.user, ...action.payload };

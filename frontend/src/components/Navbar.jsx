@@ -49,11 +49,15 @@ export default function Navbar() {
   }, []);
 
   const fetchNotifications = async () => {
+    // Only fetch if we have a token stored (avoid 401 noise)
+    if (!localStorage.getItem('token')) return;
     try {
       const res = await notificationAPI.getAll();
-      setNotifications(res.data.data.notifications);
-      setUnreadCount(res.data.data.unreadCount);
-    } catch (err) { /* ignore */ }
+      setNotifications(res.data.data?.notifications || []);
+      setUnreadCount(res.data.data?.unreadCount || 0);
+    } catch (err) {
+      // 401 handled by axios interceptor (auto-refresh), ignore other errors
+    }
   };
 
   const handleMarkAllRead = async () => {
@@ -62,6 +66,20 @@ export default function Navbar() {
       setUnreadCount(0);
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     } catch (err) { /* ignore */ }
+  };
+
+  const handleMarkRead = async (notif) => {
+    // Optimistic update ngay lập tức
+    if (!notif.is_read) {
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      try {
+        await notificationAPI.markRead(notif.id);
+      } catch { /* ignore */ }
+    }
+    // Navigate nếu có bài viết
+    if (notif.post_id) navigate(`/posts/${notif.post_id}`);
+    setShowNotif(false);
   };
 
   const handleLogout = () => {
@@ -175,7 +193,7 @@ export default function Navbar() {
                         <div
                           key={n.id}
                           className={`flex items-start gap-3 px-4 py-3.5 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${!n.is_read ? 'bg-blue-50/50' : ''}`}
-                          onClick={() => { if (n.post_id) navigate(`/posts/${n.post_id}`); setShowNotif(false); }}
+                          onClick={() => handleMarkRead(n)}
                         >
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-[0.7rem] overflow-hidden shrink-0">
                             {n.fromUser?.avatar_url
