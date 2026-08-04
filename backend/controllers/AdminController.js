@@ -97,8 +97,8 @@ class AdminController {
         return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
       }
 
-      if (user.role === 'admin' && user._id === req.user.id) {
-        return res.status(400).json({ success: false, message: 'Bạn không thể tự khóa tài khoản của mình' });
+      if (String(user._id) === String(req.user.id)) {
+        return res.status(400).json({ success: false, message: 'Bạn không thể tự khóa tài khoản của chính mình' });
       }
 
       user.is_active = !user.is_active;
@@ -128,8 +128,8 @@ class AdminController {
         return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
       }
 
-      if (user._id === req.user.id) {
-        return res.status(400).json({ success: false, message: 'Bạn không thể tự thay đổi quyền của mình' });
+      if (String(user._id) === String(req.user.id)) {
+        return res.status(400).json({ success: false, message: 'Bạn không thể tự hạ quyền hoặc thay đổi quyền của chính mình' });
       }
 
       user.role = role;

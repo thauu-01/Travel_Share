@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { postAPI, placeAPI, categoryAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { FiSave, FiMapPin, FiPlus, FiArrowLeft } from 'react-icons/fi';
+import { FiSave, FiMapPin, FiPlus, FiArrowLeft, FiEye, FiEyeOff } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -31,7 +31,7 @@ export default function EditPostPage() {
   const { isAuthenticated, user } = useSelector(s => s.auth);
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ title: '', content: '', place_id: '', rating: 5 });
+  const [form, setForm] = useState({ title: '', content: '', place_id: '', rating: 5, status: 'published' });
   const [existingImages, setExistingImages] = useState([]);
   const [imagesToRemove, setImagesToRemove] = useState([]);
   const [newImages, setNewImages] = useState([]);
@@ -77,7 +77,8 @@ export default function EditPostPage() {
         title: post.title || '',
         content: post.content || '',
         place_id: post.place?.id || '',
-        rating: post.rating || 5
+        rating: post.rating || 5,
+        status: post.status || (post.is_hidden ? 'hidden' : 'published')
       });
       setExistingImages(post.images || []);
       setLoading(false);
@@ -146,18 +147,22 @@ export default function EditPostPage() {
   };
 
   const handleCreatePlace = async () => {
-    if (!newPlace.name || !newPlace.province || !newPlace.latitude || !newPlace.longitude) {
-      return toast.error('Tên địa điểm, Tỉnh/TP và Tọa độ là bắt buộc');
+    if (!newPlace.name.trim() || !newPlace.province.trim() || !newPlace.latitude || !newPlace.longitude) {
+      toast.error('Tên địa điểm, Tỉnh/TP và Tọa độ là bắt buộc');
+      return null;
     }
     try {
       const res = await placeAPI.create(newPlace);
       const p = res.data.data;
+      const createdId = p.id || p._id;
       setPlaces(prev => [p, ...prev]);
-      setForm({ ...form, place_id: p.id });
+      setForm(prev => ({ ...prev, place_id: createdId }));
       setShowNewPlace(false);
-      toast.success('Tạo địa điểm thành công!');
+      toast.success(`Đã lưu & chọn địa điểm "${p.name}"!`);
+      return createdId;
     } catch (err) { 
       toast.error(err.response?.data?.message || 'Lỗi tạo địa điểm'); 
+      return null;
     }
   };
 
@@ -182,11 +187,20 @@ export default function EditPostPage() {
     if (!form.title.trim() || !form.content.trim()) return toast.error('Vui lòng nhập tiêu đề và nội dung');
     setSaving(true);
     try {
+      let activePlaceId = form.place_id;
+
+      // Tự động tạo địa điểm nếu người dùng chọn trên bản đồ mà chưa nhấn "Thêm địa điểm này"
+      if (!activePlaceId && showNewPlace && newPlace.name.trim() && newPlace.province.trim()) {
+        const createdId = await handleCreatePlace();
+        if (createdId) activePlaceId = createdId;
+      }
+
       const fd = new FormData();
       fd.append('title', form.title);
       fd.append('content', form.content);
-      if (form.place_id) fd.append('place_id', form.place_id);
+      if (activePlaceId) fd.append('place_id', activePlaceId);
       fd.append('rating', form.rating);
+      fd.append('status', form.status);
       
       imagesToRemove.forEach(id => fd.append('images_to_remove', id));
       newImages.forEach(img => fd.append('images', img));
@@ -247,6 +261,48 @@ export default function EditPostPage() {
                 onChange={e => setForm({...form, content: e.target.value})} 
                 required 
               />
+            </div>
+
+            {/* Trạng thái hiển thị (Công khai / Ẩn bài viết) */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Quyền hiển thị bài viết</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, status: 'published' })}
+                  className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left cursor-pointer transition-all ${
+                    form.status === 'published'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700 ring-2 ring-blue-500/20 font-semibold'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${form.status === 'published' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                    <FiEye size={18} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold">Công khai</div>
+                    <div className="text-xs text-slate-500 font-normal">Hiển thị trên cộng đồng &amp; trang chủ</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, status: 'hidden' })}
+                  className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left cursor-pointer transition-all ${
+                    form.status === 'hidden'
+                      ? 'bg-amber-50 border-amber-500 text-amber-800 ring-2 ring-amber-500/20 font-semibold'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${form.status === 'hidden' ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                    <FiEyeOff size={18} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold">Ẩn bài viết</div>
+                    <div className="text-xs text-slate-500 font-normal">Tạm ẩn bài viết khỏi cộng đồng &amp; tìm kiếm</div>
+                  </div>
+                </button>
+              </div>
             </div>
             
             <div>

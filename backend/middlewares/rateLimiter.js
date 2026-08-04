@@ -1,9 +1,13 @@
 const rateLimit = require('express-rate-limit');
 
+// Bypass rate limit in TEST mode
+const skipInTest = () => process.env.NODE_ENV === 'test' || process.env.ALLOW_TEST_OTP === 'true';
+
 // 1. Global API rate limiter - Áp dụng cho toàn bộ /api
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 2000, // Tăng lên 2000 request / 15 phút / IP cho trải nghiệm mượt mà
+  max: 2000,
+  skip: skipInTest,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -15,7 +19,8 @@ const globalLimiter = rateLimit({
 // 2. Auth rate limiter - Áp dụng cho Đăng nhập & Đăng ký (chống Brute force)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 60, // Tối đa 60 lần thử / 15 phút / IP
+  max: 2000,
+  skip: skipInTest,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

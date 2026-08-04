@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const user = require('../controllers/UserController');
 const admin = require('../controllers/AdminController');
-const { authenticate, requireAdmin } = require('../middlewares/auth');
+const { authenticate, optionalAuth, requireAdmin } = require('../middlewares/auth');
 const { uploadSingle, handleUploadError } = require('../middlewares/upload');
 
 // Admin user management routes
@@ -13,6 +13,6 @@ router.patch('/:id/role', authenticate, requireAdmin, admin.updateUserRole);
 router.get('/liked-posts', authenticate, user.getLikedPosts);
 router.get('/:id', user.getProfile);
 router.put('/profile', authenticate, uploadSingle, handleUploadError, user.updateProfile);
-router.get('/:id/posts', user.getUserPosts);
+router.get('/:id/posts', optionalAuth, user.getUserPosts);
 
 module.exports = router;

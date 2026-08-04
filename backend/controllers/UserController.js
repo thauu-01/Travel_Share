@@ -46,7 +46,13 @@ class UserController {
 
   async getUserPosts(req, res) {
     try {
-      const posts = await Post.find({ user_id: req.params.id, status: 'published' })
+      const isOwnerOrAdmin = req.user && (String(req.params.id) === String(req.user.id) || req.user.role === 'admin');
+      const query = { user_id: req.params.id };
+      if (!isOwnerOrAdmin) {
+        query.status = 'published';
+      }
+
+      const posts = await Post.find(query)
         .populate('author', 'id full_name avatar_url')
         .populate({
           path: 'place',

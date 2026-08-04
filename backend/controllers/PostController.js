@@ -191,7 +191,7 @@ class PostController {
   // POST /api/posts
   async create(req, res) {
     try {
-      const { title, content, place_id, rating } = req.body;
+      const { title, content, place_id, rating, status } = req.body;
 
       if (!title || !content) {
         return res.status(400).json({
@@ -200,12 +200,15 @@ class PostController {
         });
       }
 
+      const postStatus = status || 'published';
       const post = await Post.create({
         title,
         content,
         user_id: req.user.id,
         place_id: place_id ? parseInt(place_id) : null,
-        rating: rating ? parseInt(rating) : null
+        rating: rating ? parseInt(rating) : null,
+        status: postStatus,
+        is_hidden: postStatus === 'hidden'
       });
 
       // Handle uploaded images
@@ -262,13 +265,22 @@ class PostController {
         return res.status(403).json({ success: false, message: 'Bạn không có quyền sửa bài viết này' });
       }
 
-      const { title, content, place_id, rating, status } = req.body;
+      const { title, content, place_id, rating, status, is_hidden } = req.body;
       
       if (title !== undefined) post.title = title;
       if (content !== undefined) post.content = content;
       if (place_id !== undefined) post.place_id = place_id ? parseInt(place_id) : null;
       if (rating !== undefined) post.rating = rating ? parseInt(rating) : null;
-      if (status !== undefined) post.status = status;
+      if (status !== undefined) {
+        post.status = status;
+        post.is_hidden = (status === 'hidden');
+      }
+      if (is_hidden !== undefined) {
+        const hiddenBool = (is_hidden === 'true' || is_hidden === true);
+        post.is_hidden = hiddenBool;
+        if (hiddenBool && post.status === 'published') post.status = 'hidden';
+        if (!hiddenBool && post.status === 'hidden') post.status = 'published';
+      }
 
       await post.save();
 

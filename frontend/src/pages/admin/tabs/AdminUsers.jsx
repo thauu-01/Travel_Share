@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
-import { FiSearch, FiCheck, FiSlash, FiUserPlus, FiUserMinus } from 'react-icons/fi';
+import { FiSearch, FiCheck, FiSlash, FiUserPlus, FiUserMinus, FiShield } from 'react-icons/fi';
 
 export default function AdminUsers() {
+  const { user: currentUser } = useSelector(state => state.auth);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -36,6 +38,9 @@ export default function AdminUsers() {
   };
 
   const handleBanToggle = async (userId, isActive) => {
+    if (String(userId) === String(currentUser?.id)) {
+      return toast.error('Bạn không thể tự khóa tài khoản của chính mình!');
+    }
     const actionText = isActive ? 'Khóa' : 'Mở khóa';
     if (!confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản này?`)) return;
 
@@ -49,6 +54,9 @@ export default function AdminUsers() {
   };
 
   const handleRoleToggle = async (userId, currentRole) => {
+    if (String(userId) === String(currentUser?.id)) {
+      return toast.error('Bạn không thể tự hạ quyền của chính mình!');
+    }
     const nextRole = currentRole === 'admin' ? 'user' : 'admin';
     const actionText = nextRole === 'admin' ? 'nâng lên Admin' : 'hạ xuống User thường';
     if (!confirm(`Bạn có chắc chắn muốn ${actionText} người dùng này?`)) return;
@@ -135,69 +143,87 @@ export default function AdminUsers() {
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Không tìm thấy người dùng phù hợp</td>
               </tr>
-            ) : users.map(u => (
-              <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                {/* Avatar and Name */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 shadow-sm border border-white">
-                      {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.full_name[0].toUpperCase()}
+            ) : users.map(u => {
+              const isSelf = String(u.id) === String(currentUser?.id);
+              return (
+                <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                  {/* Avatar and Name */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 shadow-sm border border-white">
+                        {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.full_name[0].toUpperCase()}
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-semibold text-slate-800 truncate max-w-[180px]">{u.full_name}</span>
+                        {isSelf && (
+                          <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">
+                            Bạn
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <span className="font-semibold text-slate-800 truncate max-w-[200px]">{u.full_name}</span>
-                  </div>
-                </td>
+                  </td>
 
-                {/* Email */}
-                <td className="px-4 py-3 text-slate-600 truncate max-w-[200px]">
-                  {u.email}
-                </td>
+                  {/* Email */}
+                  <td className="px-4 py-3 text-slate-600 truncate max-w-[200px]">
+                    {u.email}
+                  </td>
 
-                {/* Role */}
-                <td className="px-4 py-3 text-center">
-                  {u.role === 'admin' ? (
-                    <span className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Admin</span>
-                  ) : (
-                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">User</span>
-                  )}
-                </td>
+                  {/* Role */}
+                  <td className="px-4 py-3 text-center">
+                    {u.role === 'admin' ? (
+                      <span className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Admin</span>
+                    ) : (
+                      <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">User</span>
+                    )}
+                  </td>
 
-                {/* Status */}
-                <td className="px-4 py-3 text-center">
-                  {u.is_active ? (
-                    <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Hoạt động</span>
-                  ) : (
-                    <span className="bg-red-50 text-red-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Bị khóa</span>
-                  )}
-                </td>
+                  {/* Status */}
+                  <td className="px-4 py-3 text-center">
+                    {u.is_active ? (
+                      <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Hoạt động</span>
+                    ) : (
+                      <span className="bg-red-50 text-red-600 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider">Bị khóa</span>
+                    )}
+                  </td>
 
-                {/* Actions */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 justify-end">
-                    {/* Promote / Demote */}
-                    <button
-                      onClick={() => handleRoleToggle(u.id, u.role)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm"
-                    >
-                      {u.role === 'admin' ? <FiUserMinus size={14} /> : <FiUserPlus size={14} />}
-                      {u.role === 'admin' ? 'Hạ quyền' : 'Lên Admin'}
-                    </button>
+                  {/* Actions */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      {/* Promote / Demote */}
+                      <button
+                        onClick={() => handleRoleToggle(u.id, u.role)}
+                        disabled={isSelf}
+                        title={isSelf ? 'Tài khoản của bạn' : ''}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg transition-colors shadow-sm ${
+                          isSelf ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-50 hover:border-slate-300'
+                        }`}
+                      >
+                        {u.role === 'admin' ? <FiUserMinus size={14} /> : <FiUserPlus size={14} />}
+                        {u.role === 'admin' ? 'Hạ quyền' : 'Lên Admin'}
+                      </button>
 
-                    {/* Ban / Unban */}
-                    <button
-                      onClick={() => handleBanToggle(u.id, u.is_active)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors shadow-sm border ${
-                        u.is_active 
-                          ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100 hover:border-red-200' 
-                          : 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200'
-                      }`}
-                    >
-                      {u.is_active ? <FiSlash size={14} /> : <FiCheck size={14} />}
-                      {u.is_active ? 'Khóa' : 'Mở khóa'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      {/* Ban / Unban */}
+                      <button
+                        onClick={() => handleBanToggle(u.id, u.is_active)}
+                        disabled={isSelf}
+                        title={isSelf ? 'Tài khoản của bạn' : ''}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors shadow-sm border ${
+                          isSelf ? 'opacity-40 cursor-not-allowed ' : ''
+                        } ${
+                          u.is_active 
+                            ? 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100 hover:border-red-200' 
+                            : 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200'
+                        }`}
+                      >
+                        {u.is_active ? <FiSlash size={14} /> : <FiCheck size={14} />}
+                        {u.is_active ? 'Khóa' : 'Mở khóa'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

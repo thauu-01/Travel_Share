@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FiHeart, FiEye, FiMapPin, FiStar } from 'react-icons/fi';
+import { FiHeart, FiEye, FiEyeOff, FiMapPin, FiStar } from 'react-icons/fi';
 
 export default function PostCard({ post }) {
   const coverImage = post.images?.find(i => i.is_cover)?.image_url || post.images?.[0]?.image_url;
@@ -13,6 +13,13 @@ export default function PostCard({ post }) {
     >
       {/* Cover Image */}
       <div className="relative overflow-hidden bg-slate-100">
+        {/* Hidden Status Badge */}
+        {(post.status === 'hidden' || post.is_hidden) && (
+          <div className="absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-600/90 backdrop-blur-sm text-white shadow-sm z-10">
+            <FiEyeOff size={11} /> Đã ẩn
+          </div>
+        )}
+
         {coverImage ? (
           <img
             src={coverImage}

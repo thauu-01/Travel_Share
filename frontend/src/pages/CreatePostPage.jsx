@@ -146,18 +146,22 @@ export default function CreatePostPage() {
   };
 
   const handleCreatePlace = async () => {
-    if (!newPlace.name || !newPlace.province || !newPlace.latitude || !newPlace.longitude) {
-      return toast.error('Tên địa điểm, Tỉnh/TP và Tọa độ là bắt buộc');
+    if (!newPlace.name.trim() || !newPlace.province.trim() || !newPlace.latitude || !newPlace.longitude) {
+      toast.error('Tên địa điểm, Tỉnh/TP và Tọa độ là bắt buộc');
+      return null;
     }
     try {
       const res = await placeAPI.create(newPlace);
       const p = res.data.data;
+      const createdId = p.id || p._id;
       setPlaces(prev => [p, ...prev]);
-      setForm({ ...form, place_id: p.id });
+      setForm(prev => ({ ...prev, place_id: createdId }));
       setShowNewPlace(false);
-      toast.success('Tạo địa điểm thành công!');
+      toast.success(`Đã lưu & chọn địa điểm "${p.name}"!`);
+      return createdId;
     } catch (err) { 
       toast.error(err.response?.data?.message || 'Lỗi tạo địa điểm'); 
+      return null;
     }
   };
 
@@ -166,15 +170,25 @@ export default function CreatePostPage() {
     if (!form.title.trim() || !form.content.trim()) return toast.error('Vui lòng nhập tiêu đề và nội dung');
     setLoading(true);
     try {
+      let activePlaceId = form.place_id;
+
+      // Tự động tạo địa điểm nếu người dùng chọn trên bản đồ mà chưa nhấn "Thêm địa điểm này"
+      if (!activePlaceId && showNewPlace && newPlace.name.trim() && newPlace.province.trim()) {
+        const createdId = await handleCreatePlace();
+        if (createdId) activePlaceId = createdId;
+      }
+
       const fd = new FormData();
       fd.append('title', form.title);
       fd.append('content', form.content);
-      if (form.place_id) fd.append('place_id', form.place_id);
+      if (activePlaceId) fd.append('place_id', activePlaceId);
       fd.append('rating', form.rating);
       images.forEach(img => fd.append('images', img));
+
       const res = await postAPI.create(fd);
       toast.success('Tạo bài viết thành công!');
-      navigate(`/posts/${res.data.data.id}`);
+      const createdPost = res.data.data;
+      navigate(`/posts/${createdPost.id || createdPost._id}`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Lỗi tạo bài viết');
     } finally { setLoading(false); }
