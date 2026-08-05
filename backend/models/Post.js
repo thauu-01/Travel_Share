@@ -7,6 +7,7 @@ const postSchema = new mongoose.Schema({
   content: { type: String, required: true },
   user_id: { type: Number, ref: 'User', required: true },
   place_id: { type: Number, ref: 'Place', default: null },
+  trip_id: { type: Number, ref: 'Trip', default: null },
   rating: { type: Number, default: null, min: 1, max: 5 },
   status: { type: String, enum: ['draft', 'published', 'hidden', 'archived'], default: 'published' },
   is_hidden: { type: Boolean, default: false },
@@ -32,6 +33,13 @@ postSchema.virtual('author', {
 postSchema.virtual('place', {
   ref: 'Place',
   localField: 'place_id',
+  foreignField: '_id',
+  justOne: true
+});
+
+postSchema.virtual('trip', {
+  ref: 'Trip',
+  localField: 'trip_id',
   foreignField: '_id',
   justOne: true
 });

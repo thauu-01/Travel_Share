@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { FiMail, FiLock, FiArrowLeft, FiShield, FiCheck } from 'react-icons/fi';
+import { FiMail, FiLock, FiArrowLeft, FiShield, FiCheck, FiEye, FiEyeOff } from 'react-icons/fi';
 
 // Step indicator
 function StepBar({ step }) {
@@ -44,6 +44,8 @@ export default function ForgotPasswordPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [resetToken, setResetToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -276,14 +278,22 @@ export default function ForgotPasswordPage() {
                   <div className="relative">
                     <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input
-                      type="password"
+                      type={showNewPass ? 'text' : 'password'}
                       placeholder="Tối thiểu 6 ký tự"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full pl-10 pr-11 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       required
                       autoFocus
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors border-none bg-transparent cursor-pointer p-1"
+                      title={showNewPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    >
+                      {showNewPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                    </button>
                   </div>
                 </div>
 
@@ -292,17 +302,25 @@ export default function ForgotPasswordPage() {
                   <div className="relative">
                     <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input
-                      type="password"
+                      type={showConfirmPass ? 'text' : 'password'}
                       placeholder="Nhập lại mật khẩu mới"
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      className={`w-full pl-10 pr-11 py-3 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                         confirmPassword && confirmPassword !== newPassword
                           ? 'border-red-300 bg-red-50'
                           : 'border-slate-200'
                       }`}
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors border-none bg-transparent cursor-pointer p-1"
+                      title={showConfirmPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    >
+                      {showConfirmPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                    </button>
                   </div>
                   {confirmPassword && confirmPassword !== newPassword && (
                     <p className="text-xs text-red-500 mt-1.5">Mật khẩu không khớp</p>

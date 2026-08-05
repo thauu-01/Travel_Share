@@ -20,6 +20,13 @@ export default function PostCard({ post }) {
           </div>
         )}
 
+        {/* Attached Trip Badge */}
+        {(post.trip || post.trip_id) && (
+          <div className="absolute top-3 left-3 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600/90 backdrop-blur-sm text-white shadow-sm z-10">
+            🗺️ Lịch trình
+          </div>
+        )}
+
         {coverImage ? (
           <img
             src={coverImage}

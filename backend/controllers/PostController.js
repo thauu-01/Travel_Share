@@ -88,6 +88,7 @@ class PostController {
           select: 'id name province latitude longitude slug category_id',
           populate: { path: 'category', select: 'id name slug icon' }
         })
+        .populate('trip', 'id title start_date end_date total_days is_public')
         .populate('images', 'id image_url is_cover')
         .populate('likes', 'user_id')
         .sort(sortObj)
@@ -153,6 +154,17 @@ class PostController {
           path: 'place',
           populate: { path: 'category' }
         })
+        .populate({
+          path: 'trip',
+          populate: {
+            path: 'days',
+            options: { sort: { day_number: 1 } },
+            populate: {
+              path: 'places',
+              populate: { path: 'place' }
+            }
+          }
+        })
         .populate('images')
         .populate('likes', 'user_id')
         .populate({
@@ -170,6 +182,14 @@ class PostController {
 
       if (!post) {
         return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết' });
+      }
+
+      // Hide attached trip if private and viewer is not the trip owner
+      if (post.trip && !post.trip.is_public) {
+        const isTripOwner = req.user && String(post.trip.user_id) === String(req.user.id);
+        if (!isTripOwner) {
+          post.set('trip', null, { strict: false });
+        }
       }
 
       // Increment view count
@@ -191,7 +211,7 @@ class PostController {
   // POST /api/posts
   async create(req, res) {
     try {
-      const { title, content, place_id, rating, status } = req.body;
+      const { title, content, place_id, trip_id, rating, status } = req.body;
 
       if (!title || !content) {
         return res.status(400).json({
@@ -200,12 +220,26 @@ class PostController {
         });
       }
 
+      let validTripId = null;
+      if (trip_id) {
+        const { Trip } = require('../models');
+        const tripObj = await Trip.findById(parseInt(trip_id));
+        if (!tripObj) {
+          return res.status(404).json({ success: false, message: 'Lịch trình không tồn tại' });
+        }
+        if (String(tripObj.user_id) !== String(req.user.id)) {
+          return res.status(403).json({ success: false, message: 'Bạn chỉ được đính kèm lịch trình do chính mình tạo' });
+        }
+        validTripId = tripObj.id;
+      }
+
       const postStatus = status || 'published';
       const post = await Post.create({
         title,
         content,
         user_id: req.user.id,
         place_id: place_id ? parseInt(place_id) : null,
+        trip_id: validTripId,
         rating: rating ? parseInt(rating) : null,
         status: postStatus,
         is_hidden: postStatus === 'hidden'
@@ -213,19 +247,12 @@ class PostController {
 
       // Handle uploaded images
       if (req.files && req.files.length > 0) {
-        console.log('📸 Uploaded files:', req.files.map(f => ({ 
-          filename: f.filename, 
-          path: f.path,
-          secure_url: f.secure_url 
-        })));
         const images = req.files.map((file, index) => ({
           post_id: post.id,
           image_url: file.path,
           is_cover: index === 0
         }));
         await PostImage.insertMany(images);
-      } else {
-        console.log('⚠️ No files uploaded - req.files:', req.files);
       }
 
       // Update place avg_rating if place_id and rating provided
@@ -241,6 +268,7 @@ class PostController {
       const fullPost = await Post.findById(post.id)
         .populate('author', 'id full_name avatar_url')
         .populate('place')
+        .populate('trip')
         .populate('images');
 
       res.status(201).json({
@@ -265,12 +293,29 @@ class PostController {
         return res.status(403).json({ success: false, message: 'Bạn không có quyền sửa bài viết này' });
       }
 
-      const { title, content, place_id, rating, status, is_hidden } = req.body;
+      const { title, content, place_id, trip_id, rating, status, is_hidden } = req.body;
       
       if (title !== undefined) post.title = title;
       if (content !== undefined) post.content = content;
       if (place_id !== undefined) post.place_id = place_id ? parseInt(place_id) : null;
       if (rating !== undefined) post.rating = rating ? parseInt(rating) : null;
+      
+      if (trip_id !== undefined) {
+        if (!trip_id) {
+          post.trip_id = null;
+        } else {
+          const { Trip } = require('../models');
+          const tripObj = await Trip.findById(parseInt(trip_id));
+          if (!tripObj) {
+            return res.status(404).json({ success: false, message: 'Lịch trình không tồn tại' });
+          }
+          if (String(tripObj.user_id) !== String(req.user.id)) {
+            return res.status(403).json({ success: false, message: 'Bạn chỉ được đính kèm lịch trình do chính mình tạo' });
+          }
+          post.trip_id = tripObj.id;
+        }
+      }
+
       if (status !== undefined) {
         post.status = status;
         post.is_hidden = (status === 'hidden');

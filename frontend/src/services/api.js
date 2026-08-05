@@ -121,12 +121,16 @@ export const placeAPI = {
 
 export const tripAPI = {
   getAll: () => API.get('/trips'),
+  getMyTrips: () => API.get('/trips/my-trips'),
   getById: (id) => API.get(`/trips/${id}`),
   create: (data) => API.post('/trips', data),
   update: (id, data) => API.put(`/trips/${id}`, data),
   delete: (id) => API.delete(`/trips/${id}`),
   addDay: (id, data) => API.post(`/trips/${id}/days`, data),
+  updateDay: (tripId, dayId, data) => API.patch(`/trips/${tripId}/days/${dayId}`, data),
+  deleteDay: (tripId, dayId) => API.delete(`/trips/${tripId}/days/${dayId}`),
   addPlace: (tripId, dayId, data) => API.post(`/trips/${tripId}/days/${dayId}/places`, data),
+  removePlace: (tripId, dayId, placeId) => API.delete(`/trips/${tripId}/days/${dayId}/places/${placeId}`),
 };
 
 export const userAPI = {

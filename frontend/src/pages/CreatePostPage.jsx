@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { postAPI, placeAPI, categoryAPI } from '../services/api';
+import { postAPI, placeAPI, categoryAPI, tripAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { FiImage, FiSend, FiMapPin, FiPlus, FiX } from 'react-icons/fi';
+import { FiImage, FiSend, FiMapPin, FiPlus, FiX, FiCalendar, FiGlobe, FiLock } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -32,10 +32,11 @@ export default function CreatePostPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  const [form, setForm] = useState({ title: '', content: '', place_id: '', rating: 5 });
+  const [form, setForm] = useState({ title: '', content: '', place_id: '', trip_id: '', rating: 5 });
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [places, setPlaces] = useState([]);
+  const [myTrips, setMyTrips] = useState([]);
   const [loading, setLoading] = useState(false);
   
   // Location selection / Creation states
@@ -51,8 +52,9 @@ export default function CreatePostPage() {
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
-    placeAPI.getAll({ limit: 100 }).then(r => setPlaces(r.data.data.places || []));
-    categoryAPI.getAll().then(r => setCategories(r.data.data || []));
+    placeAPI.getAll({ limit: 100 }).then(r => setPlaces(r.data.data.places || [])).catch(() => {});
+    categoryAPI.getAll().then(r => setCategories(r.data.data || [])).catch(() => {});
+    tripAPI.getMyTrips().then(r => setMyTrips(r.data.data || [])).catch(() => {});
   }, []);
 
   // Search autocomplete effect from Nominatim
@@ -182,6 +184,7 @@ export default function CreatePostPage() {
       fd.append('title', form.title);
       fd.append('content', form.content);
       if (activePlaceId) fd.append('place_id', activePlaceId);
+      if (form.trip_id) fd.append('trip_id', form.trip_id);
       fd.append('rating', form.rating);
       images.forEach(img => fd.append('images', img));
 
@@ -193,6 +196,8 @@ export default function CreatePostPage() {
       toast.error(err.response?.data?.message || 'Lỗi tạo bài viết');
     } finally { setLoading(false); }
   };
+
+  const selectedTripObj = myTrips.find(t => String(t.id) === String(form.trip_id));
 
   return (
     <div className="pt-24 min-h-screen bg-[#f0f7ff]">
@@ -216,6 +221,52 @@ export default function CreatePostPage() {
                 onChange={e => setForm({...form, title: e.target.value})} 
                 required 
               />
+            </div>
+
+            {/* ── Đính kèm Lịch trình ────────────────────────────────────── */}
+            <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 p-5 rounded-2xl border border-blue-100/80">
+              <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
+                <FiCalendar className="text-blue-600" /> Đính kèm Lịch trình (Tuỳ chọn)
+              </label>
+              <select
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                value={form.trip_id}
+                onChange={e => setForm({ ...form, trip_id: e.target.value })}
+              >
+                <option value="">-- Không đính kèm lịch trình --</option>
+                {myTrips.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.title} ({t.total_days || 1} ngày {t.is_public ? '🌐 Công khai' : '🔒 Riêng tư'})
+                  </option>
+                ))}
+              </select>
+
+              {/* Trip Preview Card */}
+              {selectedTripObj && (
+                <div className="mt-3 p-4 bg-white rounded-xl border border-blue-200 shadow-sm flex items-center justify-between gap-4 animate-in">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">{selectedTripObj.title}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${selectedTripObj.is_public ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {selectedTripObj.is_public ? '🌐 Công khai' : '🔒 Riêng tư (Ẩn khỏi bài viết tới khi bạn chuyển sang Công khai)'}
+                      </span>
+                    </div>
+                    {selectedTripObj.description && (
+                      <p className="text-slate-500 text-xs mt-1 line-clamp-1">{selectedTripObj.description}</p>
+                    )}
+                    <div className="text-xs text-blue-600 font-semibold mt-1 flex items-center gap-2">
+                      <span>📅 {selectedTripObj.total_days || 1} ngày</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, trip_id: '' })}
+                    className="text-xs text-slate-400 hover:text-red-500 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors border-none bg-transparent cursor-pointer shrink-0"
+                  >
+                    Xóa chọn
+                  </button>
+                </div>
+              )}
             </div>
             
             <div>
