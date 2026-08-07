@@ -5,7 +5,7 @@ const notificationSchema = new mongoose.Schema({
   _id: Number,
   user_id: { type: Number, ref: 'User', required: true },
   from_user_id: { type: Number, ref: 'User', default: null },
-  type: { type: String, enum: ['like', 'comment', 'reply'], required: true },
+  type: { type: String, enum: ['like', 'comment', 'reply', 'system'], required: true },
   post_id: { type: Number, ref: 'Post', default: null },
   message: { type: String, default: null },
   is_read: { type: Boolean, default: false }

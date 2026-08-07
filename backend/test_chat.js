@@ -38,10 +38,19 @@ async function getAIReply(userMessage) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const prompt = `Bạn là trợ lý AI hỗ trợ của TravelShare - nền tảng chia sẻ trải nghiệm du lịch Việt Nam. Hãy trả lời cực kỳ ngắn gọn, thân thiện bằng tiếng Việt. Nếu câu hỏi không liên quan đến du lịch Việt Nam hoặc ứng dụng TravelShare, hãy lịch sự từ chối và hướng dẫn người dùng hỏi đúng chủ đề.\n\nUser hỏi: ${userMessage}`;
-    const result = await model.generateContent(prompt);
-    return result.response.text().trim();
+    const modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-pro', 'gemini-1.0-pro'];
+    for (const m of modelsToTry) {
+      try {
+        console.log(`Thử model: ${m}...`);
+        const model = genAI.getGenerativeModel({ model: m });
+        const result = await model.generateContent("Địa điểm du lịch nào đẹp ở Việt Nam?");
+        console.log(`✅ THÀNH CÔNG với model ${m}! Kết quả:`, result.response.text());
+        return result.response.text();
+      } catch (err) {
+        console.log(`❌ Lỗi model ${m}:`, err.message);
+      }
+    }
+    return generateFallbackReply(userMessage);
   } catch (err) {
     console.log('--- ERROR LOGGED (Simulated) ---');
     console.log(err.message);

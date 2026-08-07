@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiSearch, FiX } from 'react-icons/fi';
@@ -28,64 +29,121 @@ export default function AdminPlaces() {
   const [places, setPlaces] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedProvince, setSelectedProvince] = useState('');
+  const [provinces, setProvinces] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Form states
+  // Form Modal state
   const [showForm, setShowForm] = useState(false);
   const [editingPlace, setEditingPlace] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     province: '',
-    address: '',
-    latitude: '16.0544',
-    longitude: '108.2472',
     category_id: '',
+    address: '',
+    latitude: 10.7769,
+    longitude: 106.7009,
     description: ''
   });
 
-  // Map view toggle
-  const [showMap, setShowMap] = useState(false);
-  const [mapCenter, setMapCenter] = useState([16.0544, 108.2472]);
-  
-  // Search suggestion state
+  // Delete confirm modal state
+  const [deleteTargetPlace, setDeleteTargetPlace] = useState(null);
+
+  // Map Nominatim search state
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mapCenter, setMapCenter] = useState([10.7769, 106.7009]);
 
   useEffect(() => {
     fetchPlacesAndCategories();
-  }, [search]);
-
-  // Autocomplete search Nominatim
-  useEffect(() => {
-    if (searchQuery.trim().length < 3) {
-      setSuggestions([]);
-      return;
-    }
-    const delayDebounceFn = setTimeout(() => {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=vn&addressdetails=1&limit=5`)
-        .then(res => res.json())
-        .then(data => setSuggestions(data || []))
-        .catch(err => console.error(err));
-    }, 600);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [search, selectedCategory, selectedProvince]);
 
   const fetchPlacesAndCategories = async () => {
     setLoading(true);
     try {
-      const [placesRes, categoriesRes] = await Promise.all([
-        adminAPI.getPlaces({ search }),
+      const [resPlaces, resCats] = await Promise.all([
+        adminAPI.getPlaces({
+          search,
+          category_id: selectedCategory,
+          province: selectedProvince,
+          limit: 100
+        }),
         adminAPI.getCategories()
       ]);
-      setPlaces(placesRes.data.data);
-      setCategories(categoriesRes.data.data);
+
+      const fetchedPlaces = Array.isArray(resPlaces.data?.data?.places)
+        ? resPlaces.data.data.places
+        : (Array.isArray(resPlaces.data?.data) ? resPlaces.data.data : []);
+      const fetchedCats = Array.isArray(resCats.data?.data) ? resCats.data.data : [];
+
+      setPlaces(fetchedPlaces);
+      setCategories(fetchedCats);
+
+      const uniqueProvinces = [...new Set(fetchedPlaces.map(p => p.province).filter(Boolean))];
+      setProvinces(uniqueProvinces);
     } catch (err) {
-      toast.error('Không thể tải thông tin địa điểm');
+      console.error(err);
+      toast.error('Lỗi khi tải dữ liệu địa điểm');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Nominatim Autocomplete Live Search
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=vn&addressdetails=1&limit=5`)
+        .then(res => res.json())
+        .then(data => {
+          setSuggestions(data || []);
+        })
+        .catch(() => setSuggestions([]));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSelectSuggestion = (item) => {
+    const lat = parseFloat(item.lat);
+    const lon = parseFloat(item.lon);
+    const parts = item.display_name.split(',');
+    const name = parts[0] ? parts[0].trim() : item.display_name;
+    const prov = item.address?.state || item.address?.city || item.address?.province || (parts[parts.length - 2] ? parts[parts.length - 2].trim() : 'Việt Nam');
+
+    setFormData(prev => ({
+      ...prev,
+      name: name,
+      province: prov,
+      address: item.display_name,
+      latitude: lat.toFixed(6),
+      longitude: lon.toFixed(6)
+    }));
+
+    setMapCenter([lat, lon]);
+    setSearchQuery(name);
+    setShowSuggestions(false);
+  };
+
+  const reverseGeocode = (lat, lng) => {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.display_name) {
+          const parts = data.display_name.split(',');
+          const prov = data.address?.state || data.address?.city || data.address?.province || (parts[parts.length - 2] ? parts[parts.length - 2].trim() : 'Việt Nam');
+          setFormData(prev => ({
+            ...prev,
+            address: data.display_name,
+            province: prov
+          }));
+        }
+      })
+      .catch(() => {});
   };
 
   const handleOpenCreate = () => {
@@ -93,79 +151,39 @@ export default function AdminPlaces() {
     setFormData({
       name: '',
       province: '',
-      address: '',
-      latitude: '16.0544',
-      longitude: '108.2472',
       category_id: categories[0]?.id || '',
+      address: '',
+      latitude: 10.7769,
+      longitude: 106.7009,
       description: ''
     });
-    setMapCenter([16.0544, 108.2472]);
+    setMapCenter([10.7769, 106.7009]);
+    setSearchQuery('');
     setShowForm(true);
   };
 
   const handleOpenEdit = (place) => {
     setEditingPlace(place);
+    const lat = parseFloat(place.latitude) || 10.7769;
+    const lon = parseFloat(place.longitude) || 106.7009;
     setFormData({
-      name: place.name,
-      province: place.province,
+      name: place.name || '',
+      province: place.province || '',
+      category_id: place.category_id || '',
       address: place.address || '',
-      latitude: place.latitude.toString(),
-      longitude: place.longitude.toString(),
-      category_id: place.category_id,
+      latitude: lat,
+      longitude: lon,
       description: place.description || ''
     });
-    setMapCenter([place.latitude, place.longitude]);
-    setShowForm(true);
-  };
-
-  const extractProvince = (address) => {
-    if (!address) return '';
-    return address.city || address.state || address.province || address.town || '';
-  };
-
-  const handleSelectSuggestion = (item) => {
-    const lat = parseFloat(item.lat);
-    const lon = parseFloat(item.lon);
-    const province = extractProvince(item.address);
-    const displayName = item.display_name;
-    const name = item.name || displayName.split(',')[0];
-
-    setFormData(prev => ({
-      ...prev,
-      name,
-      province,
-      address: displayName,
-      latitude: lat.toFixed(6),
-      longitude: lon.toFixed(6)
-    }));
-
     setMapCenter([lat, lon]);
-    setSuggestions([]);
-    setShowSuggestions(false);
-    setSearchQuery('');
-  };
-
-  const reverseGeocode = async (lat, lon) => {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`);
-      const data = await res.json();
-      if (data) {
-        const province = extractProvince(data.address);
-        setFormData(prev => ({
-          ...prev,
-          province: province || prev.province,
-          address: data.display_name || prev.address
-        }));
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    setSearchQuery(place.name || '');
+    setShowForm(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.province || !formData.category_id) {
-      return toast.error('Vui lòng điền đủ thông tin');
+      return toast.error('Vui lòng điền đủ Tên, Tỉnh thành và Danh mục');
     }
 
     try {
@@ -183,11 +201,16 @@ export default function AdminPlaces() {
     }
   };
 
-  const handleDelete = async (placeId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa địa điểm này?')) return;
+  const handleOpenDelete = (place) => {
+    setDeleteTargetPlace(place);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetPlace) return;
     try {
-      const res = await adminAPI.deletePlace(placeId);
-      toast.success(res.data.message);
+      const res = await adminAPI.deletePlace(deleteTargetPlace.id);
+      toast.success(res.data.message || 'Xóa địa điểm thành công');
+      setDeleteTargetPlace(null);
       fetchPlacesAndCategories();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Lỗi khi xóa địa điểm');
@@ -197,110 +220,98 @@ export default function AdminPlaces() {
   return (
     <div className="animate-in">
       <div className="mb-6 flex justify-between items-center flex-wrap gap-3">
-        <div className="flex gap-3">
-          <button 
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-indigo-300 transition-all font-semibold shadow-sm text-sm"
-            onClick={() => setShowMap(!showMap)}
+        <div className="flex gap-3 flex-wrap flex-1">
+          {/* Category filter */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <span className="text-lg">🗺️</span> {showMap ? 'Ẩn bản đồ' : 'Hiển thị bản đồ tổng'}
-          </button>
-          <button 
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold shadow-sm shadow-blue-600/20 text-sm"
-            onClick={handleOpenCreate}
+            <option value="">Tất cả danh mục</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </select>
+
+          {/* Province filter */}
+          <select
+            value={selectedProvince}
+            onChange={(e) => setSelectedProvince(e.target.value)}
+            className="px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <FiPlus size={18} /> Thêm địa điểm
-          </button>
+            <option value="">Tất cả tỉnh thành</option>
+            {provinces.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
         </div>
+
+        <button
+          onClick={handleOpenCreate}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm shadow-blue-600/20 text-sm border-none cursor-pointer transition-all"
+        >
+          <FiPlus size={16} /> Thêm địa điểm mới
+        </button>
       </div>
 
-      {/* Global Map of all Places */}
-      {showMap && places.length > 0 && (
-        <div style={{ height: '380px', width: '100%', borderRadius: 12, marginBottom: '20px', overflow: 'hidden', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', border: '1px solid #cbd5e1', zIndex: 1 }}>
-          <MapContainer center={[16.0544, 108.2472]} zoom={6} style={{ height: '100%', width: '100%' }}>
-            <TileLayer
-              attribution='&copy; OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {places.map(p => (
-              <Marker key={p.id} position={[p.latitude, p.longitude]}>
-                <Popup>
-                  <div style={{ padding: '4px' }}>
-                    <strong style={{ fontSize: '0.95rem' }}>{p.name}</strong>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>{p.category?.icon} {p.category?.name} • {p.province}</div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        </div>
-      )}
-
-      {/* Search Filter */}
-      <div style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: '16px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        border: '1px solid #e2e8f0',
-        display: 'flex',
-        gap: '12px',
-        marginBottom: '20px',
-        alignItems: 'center'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 10px', backgroundColor: '#f8fafc', flex: '1' }}>
-          <FiSearch style={{ color: '#94a3b8', marginRight: '8px' }} />
+      {/* Filter search bar */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 mb-5 flex items-center gap-3">
+        <div className="flex items-center border border-slate-300 rounded-xl px-3 bg-slate-50 flex-1 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+          <FiSearch className="text-slate-400 mr-2" size={16} />
           <input
             type="text"
             placeholder="Tìm theo tên địa điểm hoặc tỉnh thành..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ border: 'none', background: 'none', padding: '8px 0', width: '100%', fontSize: '0.9rem', outline: 'none' }}
+            className="w-full py-2.5 text-sm font-medium text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-400"
           />
         </div>
       </div>
 
       {/* Places table */}
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-              <th style={{ padding: '14px 16px' }}>Địa điểm</th>
-              <th style={{ padding: '14px 16px' }}>Tỉnh/Thành phố</th>
-              <th style={{ padding: '14px 16px' }}>Danh mục</th>
-              <th style={{ padding: '14px 16px', textAlign: 'center' }}>Đánh giá TB</th>
-              <th style={{ padding: '14px 16px', textAlign: 'right' }}>Hành động</th>
+      <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-slate-600 uppercase bg-slate-50 border-b border-indigo-50 font-bold">
+            <tr>
+              <th className="px-4 py-3.5 font-bold text-slate-700">Địa điểm</th>
+              <th className="px-4 py-3.5 font-bold text-slate-700">Tỉnh / Thành phố</th>
+              <th className="px-4 py-3.5 font-bold text-slate-700">Danh mục</th>
+              <th className="px-4 py-3.5 font-bold text-slate-700 text-center">Đánh giá TB</th>
+              <th className="px-4 py-3.5 font-bold text-slate-700 text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải...</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Đang tải địa điểm...</td>
               </tr>
-            ) : places.length === 0 ? (
+            ) : (!places || places.length === 0) ? (
               <tr>
-                <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Không tìm thấy địa điểm nào</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-500 font-medium">Không tìm thấy địa điểm nào</td>
               </tr>
-            ) : places.map(p => (
-              <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '14px 16px', fontWeight: 600, color: '#0f172a' }}>{p.name}</td>
-                <td style={{ padding: '14px 16px', color: '#475569' }}>{p.province}</td>
-                <td style={{ padding: '14px 16px' }}>
-                  <span style={{ fontSize: '0.85rem' }}>{p.category?.icon} {p.category?.name}</span>
+            ) : (places || []).map(p => (
+              <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3.5 font-bold text-slate-900">{p.name}</td>
+                <td className="px-4 py-3.5 font-medium text-slate-700">{p.province}</td>
+                <td className="px-4 py-3.5">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-semibold border border-slate-200/60">
+                    {p.category?.icon || '📍'} {p.category?.name || 'Chưa phân loại'}
+                  </span>
                 </td>
-                <td style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 'bold', color: '#eab308' }}>
+                <td className="px-4 py-3.5 text-center font-extrabold text-amber-500">
                   ★ {p.avg_rating?.toFixed(1) || '0.0'}
                 </td>
-                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                <td className="px-4 py-3.5">
                   <div className="flex items-center gap-2 justify-end">
                     <button
                       onClick={() => handleOpenEdit(p)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm cursor-pointer"
                     >
                       <FiEdit2 size={14} /> Sửa
                     </button>
                     <button
-                      onClick={() => handleDelete(p.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm"
+                      onClick={() => handleOpenDelete(p)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm border-none cursor-pointer"
                     >
                       <FiTrash2 size={14} /> Xóa
                     </button>
@@ -312,38 +323,40 @@ export default function AdminPlaces() {
         </table>
       </div>
 
-      {/* Add / Edit Form Modal */}
-      {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div style={{ background: 'white', borderRadius: 16, padding: '24px', width: '560px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
+      {/* Add / Edit Form Modal — Rendered via Portal */}
+      {showForm && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-in">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+              <h3 className="text-lg font-extrabold text-slate-900">
                 {editingPlace ? '📍 Chỉnh sửa địa điểm' : '📍 Thêm địa điểm mới'}
               </h3>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><FiX size={20} /></button>
+              <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer">
+                <FiX size={18} />
+              </button>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Geocoding Search */}
-              <div className="form-group" style={{ position: 'relative' }}>
-                <label className="form-label">🔍 Bản đồ & Tìm kiếm địa chỉ tự động</label>
+              <div className="relative">
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
+                  🔍 Bản đồ & Tìm kiếm địa chỉ tự động
+                </label>
                 <input
                   type="text"
-                  className="form-input"
                   placeholder="Tìm kiếm địa điểm trên bản đồ..."
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
                   onFocus={() => setShowSuggestions(true)}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
                 {showSuggestions && suggestions.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 1000, maxHeight: '180px', overflowY: 'auto', marginTop: 4 }}>
+                  <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-44 overflow-y-auto mt-1">
                     {suggestions.map((item, idx) => (
                       <div
                         key={idx}
                         onClick={() => handleSelectSuggestion(item)}
-                        style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem' }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'white'}
+                        className="px-3 py-2 cursor-pointer border-b border-slate-100 hover:bg-indigo-50 text-xs text-slate-700 transition-colors"
                       >
                         {item.display_name}
                       </div>
@@ -353,7 +366,7 @@ export default function AdminPlaces() {
               </div>
 
               {/* Leaflet map inside Modal */}
-              <div style={{ height: '180px', width: '100%', borderRadius: 8, overflow: 'hidden', marginBottom: 16, zIndex: 1 }}>
+              <div className="h-44 w-full rounded-2xl overflow-hidden border border-slate-200">
                 <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   <Marker
@@ -377,35 +390,35 @@ export default function AdminPlaces() {
               </div>
 
               {/* Name */}
-              <div className="form-group">
-                <label className="form-label">Tên hiển thị</label>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Tên hiển thị</label>
                 <input
                   type="text"
-                  className="form-input"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none"
                   required
                 />
               </div>
 
               {/* Province and Category */}
-              <div className="grid grid-2">
-                <div className="form-group">
-                  <label className="form-label">Tỉnh/Thành phố</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Tỉnh / Thành phố</label>
                   <input
                     type="text"
-                    className="form-input"
                     value={formData.province}
                     onChange={e => setFormData({ ...formData, province: e.target.value })}
+                    className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none"
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Danh mục phân loại</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Danh mục phân loại</label>
                   <select
                     value={formData.category_id}
                     onChange={e => setFormData({ ...formData, category_id: e.target.value })}
-                    className="form-select"
+                    className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none"
                     required
                   >
                     {categories.map(c => (
@@ -416,46 +429,95 @@ export default function AdminPlaces() {
               </div>
 
               {/* Readonly Address */}
-              <div className="form-group">
-                <label className="form-label">Địa chỉ chi tiết (Tự động)</label>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Địa chỉ chi tiết (Tự động)</label>
                 <input
                   type="text"
-                  className="form-input"
                   value={formData.address}
                   onChange={e => setFormData({ ...formData, address: e.target.value })}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none"
                 />
               </div>
 
               {/* Lat / Long */}
-              <div className="grid grid-2">
-                <div className="form-group">
-                  <label className="form-label">Vĩ độ (Latitude)</label>
-                  <input type="text" className="form-input" value={formData.latitude} readOnly style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed' }} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Vĩ độ (Latitude)</label>
+                  <input type="text" value={formData.latitude} readOnly className="w-full px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-xl outline-none cursor-not-allowed" />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Kinh độ (Longitude)</label>
-                  <input type="text" className="form-input" value={formData.longitude} readOnly style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed' }} />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Kinh độ (Longitude)</label>
+                  <input type="text" value={formData.longitude} readOnly className="w-full px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-xl outline-none cursor-not-allowed" />
                 </div>
               </div>
 
               {/* Description */}
-              <div className="form-group">
-                <label className="form-label">Mô tả giới thiệu địa điểm</label>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Mô tả giới thiệu địa điểm</label>
                 <textarea
-                  className="form-textarea"
                   rows={2}
                   value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none"
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary">Lưu thông tin</button>
+              <div className="flex gap-3 pt-3">
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white">
+                  Hủy
+                </button>
+                <button type="submit" className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-md shadow-blue-600/20 border-none cursor-pointer">
+                  Lưu thông tin
+                </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Custom Modern Delete Confirm Modal — Rendered via Portal */}
+      {deleteTargetPlace && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-scale-in">
+            <div className="flex justify-between items-center mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center text-lg font-bold">
+                📍
+              </div>
+              <button
+                onClick={() => setDeleteTargetPlace(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-extrabold text-slate-900 mb-2">
+              Xác nhận xóa địa điểm
+            </h3>
+            <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+              Bạn có chắc chắn muốn xóa địa điểm <strong>"{deleteTargetPlace.name}"</strong> ({deleteTargetPlace.province})? Thao tác này không thể hoàn tác.
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTargetPlace(null)}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-all shadow-md shadow-red-600/20 border-none cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <FiTrash2 size={15} /> Xóa địa điểm
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

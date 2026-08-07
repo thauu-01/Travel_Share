@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
-import { FiSearch, FiEye, FiEyeOff, FiTrash2, FiExternalLink } from 'react-icons/fi';
+import { FiSearch, FiEye, FiEyeOff, FiTrash2, FiExternalLink, FiX } from 'react-icons/fi';
 
 export default function AdminPosts() {
   const [posts, setPosts] = useState([]);
@@ -10,6 +11,10 @@ export default function AdminPosts() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // Modal confirm states
+  const [visibilityModal, setVisibilityModal] = useState(null); // { id, title, isHidden }
+  const [deleteModal, setDeleteModal] = useState(null); // { id, title }
 
   useEffect(() => {
     fetchPosts();
@@ -33,25 +38,24 @@ export default function AdminPosts() {
     }
   };
 
-  const handleToggleVisibility = async (postId, isHidden) => {
-    const actionText = isHidden ? 'hiển thị lại' : 'ẩn đi';
-    if (!confirm(`Bạn có chắc muốn ${actionText} bài viết này khỏi Newsfeed chính?`)) return;
-
+  const handleConfirmVisibility = async () => {
+    if (!visibilityModal) return;
     try {
-      const res = await adminAPI.togglePostVisibility(postId);
-      toast.success(res.data.message);
+      const res = await adminAPI.togglePostVisibility(visibilityModal.id);
+      toast.success(res.data.message || 'Cập nhật trạng thái bài viết thành công');
+      setVisibilityModal(null);
       fetchPosts();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Lỗi xử lý');
     }
   };
 
-  const handleDeletePost = async (postId) => {
-    if (!confirm('Bạn có CỰC KỲ chắc chắn muốn xóa vĩnh viễn bài viết này cùng tất cả bình luận/lượt thích liên quan? Thao tác này không thể hoàn tác.')) return;
-
+  const handleConfirmDelete = async () => {
+    if (!deleteModal) return;
     try {
-      const res = await adminAPI.deletePost(postId);
-      toast.success(res.data.message);
+      const res = await adminAPI.deletePost(deleteModal.id);
+      toast.success(res.data.message || 'Đã xóa bài viết vĩnh viễn');
+      setDeleteModal(null);
       fetchPosts();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Lỗi xử lý');
@@ -61,27 +65,16 @@ export default function AdminPosts() {
   return (
     <div className="animate-in">
       {/* Filter panel */}
-      <div style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: '16px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        border: '1px solid #e2e8f0',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '12px',
-        marginBottom: '20px',
-        alignItems: 'center'
-      }}>
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 mb-5 flex flex-wrap gap-3 items-center">
         {/* Search */}
-        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 10px', backgroundColor: '#f8fafc', flex: '1', minWidth: '200px' }}>
-          <FiSearch style={{ color: '#94a3b8', marginRight: '8px' }} />
+        <div className="flex items-center border border-slate-300 rounded-xl px-3 bg-slate-50 flex-1 min-w-[200px] focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+          <FiSearch className="text-slate-400 mr-2" size={16} />
           <input
             type="text"
             placeholder="Tìm theo tiêu đề hoặc nội dung..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ border: 'none', background: 'none', padding: '8px 0', width: '100%', fontSize: '0.9rem', outline: 'none' }}
+            className="w-full py-2.5 text-sm font-medium text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-400"
           />
         </div>
 
@@ -89,8 +82,7 @@ export default function AdminPosts() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="form-select"
-          style={{ width: '180px', marginBottom: 0 }}
+          className="px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">Tất cả trạng thái</option>
           <option value="published">Đang hiển thị</option>
@@ -157,7 +149,6 @@ export default function AdminPosts() {
                 {/* Actions */}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5 justify-end">
-                    {/* View Details */}
                     <a
                       href={`/posts/${p.id}`}
                       target="_blank"
@@ -167,19 +158,17 @@ export default function AdminPosts() {
                       <FiExternalLink size={14} /> Xem
                     </a>
 
-                    {/* Toggle hide/show */}
                     <button
-                      onClick={() => handleToggleVisibility(p.id, p.is_hidden)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm"
+                      onClick={() => setVisibilityModal({ id: p.id, title: p.title, isHidden: p.is_hidden })}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm cursor-pointer"
                     >
                       {p.is_hidden ? <FiEye size={14} /> : <FiEyeOff size={14} />}
                       {p.is_hidden ? 'Hiện' : 'Ẩn'}
                     </button>
 
-                    {/* Delete */}
                     <button
-                      onClick={() => handleDeletePost(p.id)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm"
+                      onClick={() => setDeleteModal({ id: p.id, title: p.title })}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm cursor-pointer"
                     >
                       <FiTrash2 size={14} /> Xóa
                     </button>
@@ -193,18 +182,107 @@ export default function AdminPosts() {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
+        <div className="flex justify-center gap-2 mt-5">
           {Array.from({ length: pagination.totalPages }).map((_, idx) => (
             <button
               key={idx}
               onClick={() => setPage(idx + 1)}
-              className={page === idx + 1 ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
-              style={{ minWidth: '32px' }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                page === idx + 1 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
               {idx + 1}
             </button>
           ))}
         </div>
+      )}
+
+      {/* Visibility Modal */}
+      {visibilityModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-scale-in">
+            <div className="flex justify-between items-center mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg font-bold">
+                {visibilityModal.isHidden ? '👁️' : '🙈'}
+              </div>
+              <button
+                onClick={() => setVisibilityModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-extrabold text-slate-900 mb-2">
+              {visibilityModal.isHidden ? 'Xác nhận hiển thị bài viết' : 'Xác nhận ẩn bài viết'}
+            </h3>
+            <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+              Bạn có chắc chắn muốn {visibilityModal.isHidden ? 'hiển thị lại' : 'ẩn đi'} bài viết <strong>"{visibilityModal.title}"</strong> khỏi Newsfeed chính?
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setVisibilityModal(null)}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmVisibility}
+                className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-all shadow-md shadow-indigo-600/20 border-none cursor-pointer"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Modal */}
+      {deleteModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-scale-in">
+            <div className="flex justify-between items-center mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center text-lg font-bold">
+                🗑️
+              </div>
+              <button
+                onClick={() => setDeleteModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-extrabold text-slate-900 mb-2">
+              Xác nhận xóa vĩnh viễn
+            </h3>
+            <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+              Bạn có chắc chắn muốn xóa vĩnh viễn bài viết <strong>"{deleteModal.title}"</strong> cùng toàn bộ bình luận/lượt thích liên quan? Thao tác này không thể hoàn tác.
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModal(null)}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-all shadow-md shadow-red-600/20 border-none cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <FiTrash2 size={15} /> Xóa vĩnh viễn
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -26,7 +26,7 @@ export default function AdminSupport() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, selectedUserId, loadingHistory]);
 
   const fetchConversations = async () => {
     try {

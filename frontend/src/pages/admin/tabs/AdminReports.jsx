@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiCheck, FiX, FiExternalLink } from 'react-icons/fi';
@@ -70,22 +71,28 @@ export default function AdminReports() {
   return (
     <div className="animate-in">
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '20px', marginBottom: '20px' }}>
+      <div className="flex border-b border-slate-200 gap-5 mb-5">
         <button
           onClick={() => { setStatusFilter('pending'); setPage(1); }}
-          style={{ padding: '12px 4px', border: 'none', borderBottom: statusFilter === 'pending' ? '2px solid #6366f1' : '2px solid transparent', background: 'none', color: statusFilter === 'pending' ? '#6366f1' : '#64748b', fontWeight: statusFilter === 'pending' ? 600 : 400, cursor: 'pointer' }}
+          className={`py-3 px-1 border-b-2 text-sm font-semibold transition-all border-none bg-transparent cursor-pointer ${
+            statusFilter === 'pending' ? 'border-indigo-600 text-indigo-600 border-solid' : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
         >
           Chờ xử lý
         </button>
         <button
           onClick={() => { setStatusFilter('resolved'); setPage(1); }}
-          style={{ padding: '12px 4px', border: 'none', borderBottom: statusFilter === 'resolved' ? '2px solid #6366f1' : '2px solid transparent', background: 'none', color: statusFilter === 'resolved' ? '#6366f1' : '#64748b', fontWeight: statusFilter === 'resolved' ? 600 : 400, cursor: 'pointer' }}
+          className={`py-3 px-1 border-b-2 text-sm font-semibold transition-all border-none bg-transparent cursor-pointer ${
+            statusFilter === 'resolved' ? 'border-indigo-600 text-indigo-600 border-solid' : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
         >
           Đã xử lý (Chấp thuận)
         </button>
         <button
           onClick={() => { setStatusFilter('rejected'); setPage(1); }}
-          style={{ padding: '12px 4px', border: 'none', borderBottom: statusFilter === 'rejected' ? '2px solid #6366f1' : '2px solid transparent', background: 'none', color: statusFilter === 'rejected' ? '#6366f1' : '#64748b', fontWeight: statusFilter === 'rejected' ? 600 : 400, cursor: 'pointer' }}
+          className={`py-3 px-1 border-b-2 text-sm font-semibold transition-all border-none bg-transparent cursor-pointer ${
+            statusFilter === 'rejected' ? 'border-indigo-600 text-indigo-600 border-solid' : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
         >
           Đã bác bỏ
         </button>
@@ -155,13 +162,13 @@ export default function AdminReports() {
                     <div className="flex items-center gap-1.5 justify-end">
                       <button
                         onClick={() => handleOpenResolve(r.id, 'resolved')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 border border-transparent rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 border border-transparent rounded-lg hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer"
                       >
                         <FiCheck size={14} /> Duyệt
                       </button>
                       <button
                         onClick={() => handleOpenResolve(r.id, 'rejected')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-colors shadow-sm cursor-pointer"
                       >
                         <FiX size={14} /> Bác bỏ
                       </button>
@@ -180,13 +187,14 @@ export default function AdminReports() {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
+        <div className="flex justify-center gap-2 mt-5">
           {Array.from({ length: pagination.totalPages }).map((_, idx) => (
             <button
               key={idx}
               onClick={() => setPage(idx + 1)}
-              className={page === idx + 1 ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
-              style={{ minWidth: '32px' }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                page === idx + 1 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
               {idx + 1}
             </button>
@@ -194,33 +202,69 @@ export default function AdminReports() {
         </div>
       )}
 
-      {/* Admin Note Modal */}
-      {showNoteModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div style={{ background: 'white', borderRadius: 12, padding: '24px', width: '380px', maxWidth: '90vw', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700 }}>
-              {resolveAction === 'resolved' ? '✅ Xác nhận Duyệt Báo Cáo' : '❌ Xác nhận Bác Bỏ Báo Cáo'}
+      {/* Admin Note Modal — Rendered via Portal to document.body */}
+      {showNoteModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-scale-in">
+            <div className="flex justify-between items-center mb-4">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold ${
+                resolveAction === 'resolved' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+              }`}>
+                {resolveAction === 'resolved' ? '✅' : '❌'}
+              </div>
+              <button
+                onClick={() => setShowNoteModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-extrabold text-slate-900 mb-1">
+              {resolveAction === 'resolved' ? 'Xác nhận Duyệt Báo Cáo' : 'Xác nhận Bác Bỏ Báo Cáo'}
             </h3>
-            <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: 16 }}>Nhập ghi chú xử lý (tùy chọn) trước khi lưu trạng thái.</p>
-            <form onSubmit={handleResolveSubmit}>
-              <div className="form-group">
+            <p className="text-slate-500 text-sm mb-5 leading-relaxed">
+              Nhập ghi chú xử lý (tùy chọn) trước khi lưu thay đổi trạng thái báo cáo.
+            </p>
+
+            <form onSubmit={handleResolveSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
+                  Ghi chú của Admin
+                </label>
                 <input
                   type="text"
-                  placeholder="Ghi chú của Admin (Ví dụ: Đã ẩn bài viết vi phạm)..."
-                  className="form-input"
+                  placeholder="Ví dụ: Đã gỡ nội dung vi phạm..."
+                  className="w-full px-4 py-3 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder:text-slate-400"
                   value={adminNote}
                   onChange={e => setAdminNote(e.target.value)}
+                  autoFocus
                 />
               </div>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowNoteModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary" style={{ backgroundColor: resolveAction === 'resolved' ? '#16a34a' : '#dc2626', borderColor: resolveAction === 'resolved' ? '#16a34a' : '#dc2626' }}>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNoteModal(false)}
+                  className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className={`flex-1 py-3 px-4 rounded-xl text-white font-bold text-sm transition-all shadow-md border-none cursor-pointer ${
+                    resolveAction === 'resolved'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                      : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
+                  }`}
+                >
                   Lưu thay đổi
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

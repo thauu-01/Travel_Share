@@ -201,9 +201,28 @@ class AdminController {
       post.status = post.is_hidden ? 'hidden' : 'published';
       await post.save();
 
+      // If Admin hid the post, send system notification to author
+      if (post.is_hidden && post.user_id) {
+        const { getNextSequenceValue } = require('../models/counter');
+        const notifId = await getNextSequenceValue('notifications');
+        const notification = await Notification.create({
+          _id: notifId,
+          user_id: post.user_id,
+          from_user_id: req.user.id,
+          type: 'system',
+          post_id: post.id || post._id,
+          message: `Bài viết "${post.title || 'bài viết của bạn'}" đã bị Quản trị viên ẩn khỏi Newsfeed do vi phạm tiêu chuẩn cộng đồng.`
+        });
+
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user_${post.user_id}`).emit('notification', notification);
+        }
+      }
+
       res.json({
         success: true,
-        message: post.is_hidden ? 'Đã ẩn bài viết thành công' : 'Đã hiện bài viết thành công',
+        message: post.is_hidden ? 'Đã ẩn bài viết thành công và gửi thông báo tới tác giả' : 'Đã hiện bài viết thành công',
         data: post
       });
     } catch (error) {
@@ -220,13 +239,31 @@ class AdminController {
         return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết' });
       }
 
+      // Notify the author before deletion
+      if (post.user_id) {
+        const { getNextSequenceValue } = require('../models/counter');
+        const notifId = await getNextSequenceValue('notifications');
+        const notification = await Notification.create({
+          _id: notifId,
+          user_id: post.user_id,
+          from_user_id: req.user.id,
+          type: 'system',
+          message: `Bài viết "${post.title || 'bài viết của bạn'}" đã bị Quản trị viên xóa khỏi hệ thống do vi phạm tiêu chuẩn cộng đồng.`
+        });
+
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user_${post.user_id}`).emit('notification', notification);
+        }
+      }
+
       // Cleanup related entities
       await PostImage.deleteMany({ post_id: post._id });
       await Comment.deleteMany({ post_id: post._id });
       await Like.deleteMany({ post_id: post._id });
       await post.deleteOne();
 
-      res.json({ success: true, message: 'Xóa bài viết và nội dung liên quan thành công' });
+      res.json({ success: true, message: 'Xóa bài viết thành công và đã gửi thông báo tới tác giả' });
     } catch (error) {
       console.error('Admin deletePost error:', error);
       res.status(500).json({ success: false, message: 'Lỗi server' });
@@ -557,22 +594,32 @@ class AdminController {
         return res.status(400).json({ success: false, message: 'Tiêu đề và nội dung là bắt buộc' });
       }
 
+      const { getNextSequenceValue } = require('../models/counter');
       const users = await User.find({ is_active: true }).select('_id');
-      const notifications = users.map(user => ({
-        user_id: user._id,
-        from_user_id: req.user.id,
-        type: 'system',
-        message: `${title}: ${message}`
-      }));
-
-      await Notification.insertMany(notifications);
-
       const io = req.app.get('io');
+
+      const fullMessage = `${title}: ${message}`;
+
+      for (const targetUser of users) {
+        const nextId = await getNextSequenceValue('notifications');
+        const notif = await Notification.create({
+          _id: nextId,
+          user_id: targetUser._id,
+          from_user_id: req.user.id,
+          type: 'system',
+          message: fullMessage
+        });
+
+        if (io) {
+          io.to(`user_${targetUser._id}`).emit('notification', notif);
+        }
+      }
+
       if (io) {
         io.emit('system_notification', { title, message });
       }
 
-      res.json({ success: true, message: 'Đã gửi thông báo hệ thống đến tất cả người dùng hoạt động' });
+      res.json({ success: true, message: 'Đã phát sóng thông báo hệ thống đến tất cả người dùng hoạt động' });
     } catch (error) {
       console.error('Admin broadcastNotification error:', error);
       res.status(500).json({ success: false, message: 'Lỗi server' });

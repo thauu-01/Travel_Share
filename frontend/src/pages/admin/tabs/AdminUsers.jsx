@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
-import { FiSearch, FiCheck, FiSlash, FiUserPlus, FiUserMinus, FiShield } from 'react-icons/fi';
+import { FiSearch, FiCheck, FiSlash, FiUserPlus, FiUserMinus, FiShield, FiX } from 'react-icons/fi';
 
 export default function AdminUsers() {
   const { user: currentUser } = useSelector(state => state.auth);
@@ -13,6 +14,10 @@ export default function AdminUsers() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // Confirm modals state
+  const [banModal, setBanModal] = useState(null); // { id, name, isActive }
+  const [roleModal, setRoleModal] = useState(null); // { id, name, currentRole }
 
   useEffect(() => {
     fetchUsers();
@@ -37,33 +42,39 @@ export default function AdminUsers() {
     }
   };
 
-  const handleBanToggle = async (userId, isActive) => {
-    if (String(userId) === String(currentUser?.id)) {
+  const handleOpenBanModal = (u) => {
+    if (String(u.id) === String(currentUser?.id)) {
       return toast.error('Bạn không thể tự khóa tài khoản của chính mình!');
     }
-    const actionText = isActive ? 'Khóa' : 'Mở khóa';
-    if (!confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản này?`)) return;
+    setBanModal({ id: u.id, name: u.full_name, isActive: u.is_active });
+  };
 
+  const handleConfirmBan = async () => {
+    if (!banModal) return;
     try {
-      const res = await adminAPI.banUser(userId);
-      toast.success(res.data.message);
+      const res = await adminAPI.banUser(banModal.id);
+      toast.success(res.data.message || 'Cập nhật trạng thái tài khoản thành công');
+      setBanModal(null);
       fetchUsers();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Lỗi xử lý');
     }
   };
 
-  const handleRoleToggle = async (userId, currentRole) => {
-    if (String(userId) === String(currentUser?.id)) {
+  const handleOpenRoleModal = (u) => {
+    if (String(u.id) === String(currentUser?.id)) {
       return toast.error('Bạn không thể tự hạ quyền của chính mình!');
     }
-    const nextRole = currentRole === 'admin' ? 'user' : 'admin';
-    const actionText = nextRole === 'admin' ? 'nâng lên Admin' : 'hạ xuống User thường';
-    if (!confirm(`Bạn có chắc chắn muốn ${actionText} người dùng này?`)) return;
+    setRoleModal({ id: u.id, name: u.full_name, currentRole: u.role });
+  };
 
+  const handleConfirmRole = async () => {
+    if (!roleModal) return;
+    const nextRole = roleModal.currentRole === 'admin' ? 'user' : 'admin';
     try {
-      const res = await adminAPI.updateUserRole(userId, { role: nextRole });
-      toast.success(res.data.message);
+      const res = await adminAPI.updateUserRole(roleModal.id, { role: nextRole });
+      toast.success(res.data.message || 'Cập nhật quyền hạn thành công');
+      setRoleModal(null);
       fetchUsers();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Lỗi xử lý');
@@ -73,27 +84,16 @@ export default function AdminUsers() {
   return (
     <div className="animate-in">
       {/* Filter and search bar */}
-      <div style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: '16px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        border: '1px solid #e2e8f0',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '12px',
-        marginBottom: '20px',
-        alignItems: 'center'
-      }}>
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 mb-5 flex flex-wrap gap-3 items-center">
         {/* Search */}
-        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 10px', backgroundColor: '#f8fafc', flex: '1', minWidth: '200px' }}>
-          <FiSearch style={{ color: '#94a3b8', marginRight: '8px' }} />
+        <div className="flex items-center border border-slate-300 rounded-xl px-3 bg-slate-50 flex-1 min-w-[200px] focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+          <FiSearch className="text-slate-400 mr-2" size={16} />
           <input
             type="text"
             placeholder="Tìm theo tên hoặc email..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ border: 'none', background: 'none', padding: '8px 0', width: '100%', fontSize: '0.9rem', outline: 'none' }}
+            className="w-full py-2.5 text-sm font-medium text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-400"
           />
         </div>
 
@@ -101,8 +101,7 @@ export default function AdminUsers() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="form-select"
-          style={{ width: '160px', marginBottom: 0 }}
+          className="px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">Tất cả trạng thái</option>
           <option value="active">Hoạt động</option>
@@ -113,8 +112,7 @@ export default function AdminUsers() {
         <select
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          className="form-select"
-          style={{ width: '150px', marginBottom: 0 }}
+          className="px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">Tất cả vai trò</option>
           <option value="admin">Admin</option>
@@ -165,7 +163,7 @@ export default function AdminUsers() {
                   </td>
 
                   {/* Email */}
-                  <td className="px-4 py-3 text-slate-600 truncate max-w-[200px]">
+                  <td className="px-4 py-3 text-slate-600 truncate max-w-[200px] font-medium">
                     {u.email}
                   </td>
 
@@ -192,10 +190,10 @@ export default function AdminUsers() {
                     <div className="flex items-center gap-1.5 justify-end">
                       {/* Promote / Demote */}
                       <button
-                        onClick={() => handleRoleToggle(u.id, u.role)}
+                        onClick={() => handleOpenRoleModal(u)}
                         disabled={isSelf}
                         title={isSelf ? 'Tài khoản của bạn' : ''}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg transition-colors shadow-sm ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg transition-colors shadow-sm cursor-pointer ${
                           isSelf ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-50 hover:border-slate-300'
                         }`}
                       >
@@ -205,10 +203,10 @@ export default function AdminUsers() {
 
                       {/* Ban / Unban */}
                       <button
-                        onClick={() => handleBanToggle(u.id, u.is_active)}
+                        onClick={() => handleOpenBanModal(u)}
                         disabled={isSelf}
                         title={isSelf ? 'Tài khoản của bạn' : ''}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors shadow-sm border ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors shadow-sm border cursor-pointer ${
                           isSelf ? 'opacity-40 cursor-not-allowed ' : ''
                         } ${
                           u.is_active 
@@ -230,18 +228,111 @@ export default function AdminUsers() {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
+        <div className="flex justify-center gap-2 mt-5">
           {Array.from({ length: pagination.totalPages }).map((_, idx) => (
             <button
               key={idx}
               onClick={() => setPage(idx + 1)}
-              className={page === idx + 1 ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
-              style={{ minWidth: '32px' }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                page === idx + 1 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
               {idx + 1}
             </button>
           ))}
         </div>
+      )}
+
+      {/* Ban / Unban Modal */}
+      {banModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-scale-in">
+            <div className="flex justify-between items-center mb-4">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold ${
+                banModal.isActive ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+              }`}>
+                {banModal.isActive ? '🚫' : '🔓'}
+              </div>
+              <button
+                onClick={() => setBanModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-extrabold text-slate-900 mb-2">
+              {banModal.isActive ? 'Xác nhận Khóa tài khoản' : 'Xác nhận Mở khóa tài khoản'}
+            </h3>
+            <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+              Bạn có chắc chắn muốn {banModal.isActive ? 'khóa' : 'mở khóa'} tài khoản của <strong>"{banModal.name}"</strong>?
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setBanModal(null)}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBan}
+                className={`flex-1 py-3 px-4 rounded-xl text-white font-bold text-sm transition-all shadow-md border-none cursor-pointer ${
+                  banModal.isActive ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                }`}
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Role Toggle Modal */}
+      {roleModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 animate-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-scale-in">
+            <div className="flex justify-between items-center mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg font-bold">
+                👑
+              </div>
+              <button
+                onClick={() => setRoleModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors border-none bg-transparent cursor-pointer"
+              >
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <h3 className="text-xl font-extrabold text-slate-900 mb-2">
+              Xác nhận phân quyền tài khoản
+            </h3>
+            <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+              Bạn có chắc chắn muốn {roleModal.currentRole === 'admin' ? 'hạ quyền xuống User thường' : 'nâng quyền thành Quản trị viên (Admin)'} cho <strong>"{roleModal.name}"</strong>?
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setRoleModal(null)}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRole}
+                className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-all shadow-md shadow-indigo-600/20 border-none cursor-pointer"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

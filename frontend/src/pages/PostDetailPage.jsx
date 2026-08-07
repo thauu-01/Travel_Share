@@ -261,6 +261,8 @@ export default function PostDetailPage() {
   const [reportTarget, setReportTarget] = useState({ type: '', id: null });
   const [reportReason, setReportReason] = useState('');
 
+  const isAuthor = user && post ? String(post.user_id) === String(user.id || user._id) : false;
+
   useEffect(() => { fetchPost(); }, [id]);
 
   const fetchPost = async () => {

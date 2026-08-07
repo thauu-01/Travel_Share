@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Provider, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
@@ -116,6 +116,18 @@ function AppContent() {
   ]);
   const [draft, setDraft] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const chatEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (isChatOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isChatOpen, isLoading]);
 
   useEffect(() => {
     if (!isChatOpen || !showSupportButton || !isAuthenticated) return;
@@ -241,6 +253,7 @@ function AppContent() {
                     </div>
                   </div>
                 ))}
+                <div ref={chatEndRef} />
               </div>
 
               {/* Input */}
