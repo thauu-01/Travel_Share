@@ -23,7 +23,7 @@ function generateRefreshToken(user) {
 function setRefreshCookie(res, refreshToken) {
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,        // Không thể đọc bằng JS (chống XSS)
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    secure: process.env.SECURE_COOKIE === 'true', // Only set secure when HTTPS is explicitly enabled
     sameSite: 'lax',      // Chống CSRF
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 ngày (ms)
   });

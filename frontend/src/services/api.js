@@ -2,8 +2,10 @@ import axios from 'axios';
 import { store } from '../store';
 import { logout } from '../store/authSlice';
 
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true  // Required to send/receive httpOnly refresh token cookie
 });
@@ -57,7 +59,7 @@ API.interceptors.response.use(
       try {
         // Call /auth/refresh — sends httpOnly cookie automatically
         const res = await axios.post(
-          'http://localhost:5000/api/auth/refresh',
+          `${API_BASE}/auth/refresh`,
           {},
           { withCredentials: true }
         );

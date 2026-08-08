@@ -29,7 +29,7 @@ const server = http.createServer(app);
 
 // Socket.IO
 const io = new Server(server, {
-  cors: { origin: process.env.CLIENT_URL || 'http://localhost:5173', methods: ['GET', 'POST'] }
+  cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 setupSocket(io);
 app.set('io', io);
@@ -43,7 +43,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => callback(null, true), // Allow all origins (localhost, localhost:5173, Docker Nginx proxy)
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true  // Required for httpOnly cookies
@@ -68,8 +68,8 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/stats', statsRoutes);
 
 // Health check
-app.get('/', (req, res) => {
-  res.json({ message: 'TravelShare API', version: '1.0.0', status: 'running' });
+app.get(['/', '/api/health'], (req, res) => {
+  res.json({ message: 'TravelShare API', version: '1.0.0', status: 'running', timestamp: new Date() });
 });
 
 // Error handling

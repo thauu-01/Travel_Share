@@ -107,7 +107,11 @@ export default function SearchPage() {
   };
 
   const setFilter = (key, value) => {
-    setFilters(f => ({ ...f, [key]: value, page: 1 }));
+    if (key === 'page') {
+      setFilters(f => ({ ...f, page: value }));
+    } else {
+      setFilters(f => ({ ...f, [key]: value, page: 1 }));
+    }
   };
 
   const hasActiveFilters = filters.category || filters.province || filters.rating;

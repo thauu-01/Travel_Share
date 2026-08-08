@@ -29,7 +29,8 @@ export default function Navbar() {
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchNotifications();
-      socketRef.current = io('http://localhost:5000');
+      const socketUrl = import.meta.env.VITE_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+      socketRef.current = io(socketUrl);
       socketRef.current.emit('join', user.id);
       socketRef.current.on('notification', (notif) => {
         setNotifications(prev => [notif, ...prev]);
