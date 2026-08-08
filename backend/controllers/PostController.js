@@ -25,53 +25,49 @@ class PostController {
         where.rating = { $gte: parseInt(rating) };
       }
 
-      if (search) {
-        const keywords = search.trim().split(/\s+/).filter(k => k);
-        if (keywords.length > 0) {
-          // Build regex for each keyword
-          const keywordRegexes = keywords.map(kw => new RegExp(kw, 'i'));
+      if (search && search.trim()) {
+        const searchTerm = search.trim();
+        const fullRegex = new RegExp(searchTerm, 'i');
 
-          // Stage 1: Find matching places (name, province, address)
-          const matchingPlaceIds = await Place.find({
-            $or: keywordRegexes.flatMap(re => [
-              { name: re },
-              { province: re },
-              { address: re },
-              { description: re }
-            ])
-          }).select('_id').then(places => places.map(p => p._id));
+        // Stage 1: Find matching places (name, province, address, description) matching full phrase
+        const matchingPlaceIds = await Place.find({
+          $or: [
+            { name: fullRegex },
+            { province: fullRegex },
+            { address: fullRegex },
+            { description: fullRegex }
+          ]
+        }).select('_id').then(places => places.map(p => p._id));
 
-          // Stage 2: Find matching users (author name)
-          const matchingUserIds = await require('../models/User').find({
-            full_name: { $in: keywordRegexes }
-          }).select('_id').then(users => users.map(u => u._id));
+        // Stage 2: Find matching users (author name)
+        const matchingUserIds = await User.find({
+          full_name: fullRegex
+        }).select('_id').then(users => users.map(u => u._id));
 
-          // Combine: post title OR content OR matching place OR matching author
-          const searchConditions = keywords.map(kw => {
-            const re = new RegExp(kw, 'i');
-            const orClauses = [
-              { title: re },
-              { content: re },
-            ];
-            if (matchingPlaceIds.length > 0) orClauses.push({ place_id: { $in: matchingPlaceIds } });
-            if (matchingUserIds.length > 0) orClauses.push({ user_id: { $in: matchingUserIds } });
-            return { $or: orClauses };
-          });
+        // Combine search conditions: title OR content OR matching place OR matching author
+        const searchOrClauses = [
+          { title: fullRegex },
+          { content: fullRegex }
+        ];
 
-          // Merge with existing province/category filter on place_id
-          if (where.place_id) {
-            // Already filtered by place — intersect: place must match filter AND keyword
-            const filteredPlaceIds = where.place_id.$in;
-            const intersection = matchingPlaceIds.filter(id => filteredPlaceIds.includes(id));
-            // Search in title/content OR in the intersected places
-            where.$or = [
-              { $and: searchConditions },
-              { place_id: { $in: intersection } }
-            ];
-            delete where.place_id;
-          } else {
-            where.$and = searchConditions;
-          }
+        if (matchingPlaceIds.length > 0) {
+          searchOrClauses.push({ place_id: { $in: matchingPlaceIds } });
+        }
+        if (matchingUserIds.length > 0) {
+          searchOrClauses.push({ user_id: { $in: matchingUserIds } });
+        }
+
+        if (where.place_id) {
+          const filteredPlaceIds = where.place_id.$in;
+          const intersection = matchingPlaceIds.filter(id => filteredPlaceIds.includes(id));
+          where.$or = [
+            { title: fullRegex },
+            { content: fullRegex },
+            { place_id: { $in: intersection } }
+          ];
+          delete where.place_id;
+        } else {
+          where.$or = searchOrClauses;
         }
       }
 
