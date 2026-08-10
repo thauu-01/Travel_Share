@@ -5,7 +5,7 @@ import {
   FiUsers, FiFileText, FiMapPin, FiTag,
   FiMessageSquare, FiAlertTriangle, FiBell, FiHeadphones,
   FiBarChart2, FiChevronLeft, FiMenu, FiHome, FiLogOut,
-  FiShield, FiActivity
+  FiShield, FiActivity, FiCreditCard
 } from 'react-icons/fi';
 import { adminAPI } from '../../services/api';
 import { logout } from '../../store/authSlice';
@@ -20,6 +20,7 @@ const MENU = [
   { path: '/admin/reports',       label: 'Báo cáo',       icon: FiAlertTriangle, color: 'text-red-400',    dot: 'bg-red-500' },
   { path: '/admin/notifications', label: 'Thông báo',     icon: FiBell,          color: 'text-violet-400', dot: 'bg-violet-500' },
   { path: '/admin/support',       label: 'Hỗ trợ CSKH',  icon: FiHeadphones,    color: 'text-sky-400',    dot: 'bg-sky-500' },
+  { path: '/admin/transactions',  label: 'Giao dịch',      icon: FiCreditCard,    color: 'text-emerald-400',dot: 'bg-emerald-500' },
 ];
 
 const PAGE_META = [
@@ -31,7 +32,8 @@ const PAGE_META = [
   { match: p => p.startsWith('/admin/comments'),   title: 'Quản lý bình luận',    desc: 'Kiểm soát bình luận và tương tác người dùng',   icon: FiMessageSquare, accent: '#06b6d4' },
   { match: p => p.startsWith('/admin/reports'),    title: 'Xử lý báo cáo',        desc: 'Xử lý các báo cáo vi phạm từ cộng đồng',       icon: FiAlertTriangle, accent: '#ef4444' },
   { match: p => p.startsWith('/admin/notifications'), title: 'Thông báo',         desc: 'Gửi thông báo hệ thống đến người dùng',         icon: FiBell,          accent: '#8b5cf6' },
-  { match: p => p.startsWith('/admin/support'),    title: 'Hỗ trợ khách hàng',    desc: 'Trả lời tin nhắn và hỗ trợ người dùng',        icon: FiHeadphones,    accent: '#0ea5e9' },
+  { match: p => p.startsWith('/admin/support'),       title: 'Hỗ trợ khách hàng',    desc: 'Trả lời tin nhắn và hỗ trợ người dùng',        icon: FiHeadphones,    accent: '#0ea5e9' },
+  { match: p => p.startsWith('/admin/transactions'),   title: 'Lịch sử Giao dịch',     desc: 'Theo dõi doanh thu và giao dịch VNPay',         icon: FiCreditCard,    accent: '#10b981' },
 ];
 
 export default function AdminLayout() {

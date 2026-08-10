@@ -15,6 +15,7 @@ import CreatePostPage from './pages/CreatePostPage';
 import EditPostPage from './pages/EditPostPage';
 import ExplorePage from './pages/ExplorePage';
 import TripPlannerPage from './pages/TripPlannerPage';
+import AITripPlannerPage from './pages/AITripPlannerPage';
 import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -30,6 +31,8 @@ import AdminComments from './pages/admin/tabs/AdminComments';
 import AdminReports from './pages/admin/tabs/AdminReports';
 import AdminNotifications from './pages/admin/tabs/AdminNotifications';
 import AdminSupport from './pages/admin/tabs/AdminSupport';
+import AdminTransactions from './pages/admin/tabs/AdminTransactions';
+import PaymentReturnPage from './pages/PaymentReturnPage';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -65,6 +68,8 @@ function PageTitleUpdater() {
       title = 'Tìm kiếm & Lọc bài viết | TravelShare';
     } else if (pathname === '/trips') {
       title = 'Lịch trình chuyến đi | TravelShare';
+    } else if (pathname === '/trips/ai') {
+      title = '✨ AI Tạo Lịch Trình VIP | TravelShare';
     } else if (pathname === '/create-post') {
       title = 'Đăng bài viết mới | TravelShare';
     } else if (pathname.startsWith('/posts/') && pathname.endsWith('/edit')) {
@@ -97,6 +102,10 @@ function PageTitleUpdater() {
       title = 'Phát sóng Thông báo | Admin TravelShare';
     } else if (pathname === '/admin/support') {
       title = 'Hỗ trợ CSKH | Admin TravelShare';
+    } else if (pathname === '/admin/transactions') {
+      title = 'Lịch sử Giao dịch | Admin TravelShare';
+    } else if (pathname === '/payment/return') {
+      title = 'Kết quả Thanh toán | TravelShare';
     }
 
     document.title = title;
@@ -201,10 +210,12 @@ function AppContent() {
         <Route path="/create-post" element={<CreatePostPage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/trips" element={<TripPlannerPage />} />
+        <Route path="/trips/ai" element={<AITripPlannerPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/:id" element={<ProfilePage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/payment/return" element={<PaymentReturnPage />} />
 
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout />}>
@@ -217,6 +228,7 @@ function AppContent() {
           <Route path="reports" element={<AdminReports />} />
           <Route path="notifications" element={<AdminNotifications />} />
           <Route path="support" element={<AdminSupport />} />
+          <Route path="transactions" element={<AdminTransactions />} />
         </Route>
       </Routes>
 

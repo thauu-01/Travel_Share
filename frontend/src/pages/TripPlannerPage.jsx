@@ -5,7 +5,7 @@ import { tripAPI, placeAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
   FiPlus, FiTrash2, FiMapPin, FiCalendar, FiEye, FiLock,
-  FiEdit2, FiX, FiCheck, FiSearch, FiGlobe, FiList
+  FiEdit2, FiX, FiCheck, FiSearch, FiGlobe, FiList, FiZap
 } from 'react-icons/fi';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -38,6 +38,7 @@ export default function TripPlannerPage() {
   const [creating, setCreating] = useState(false);
   const [addingDay, setAddingDay] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   const isOwner = selectedTrip ? String(selectedTrip.user_id) === String(user?.id) : true;
 
@@ -384,13 +385,23 @@ export default function TripPlannerPage() {
             </h1>
             <p className="text-slate-500 mt-1 text-sm">Tạo và quản lý lịch trình du lịch cá nhân của bạn</p>
           </div>
-          <button
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-500/25 border-none cursor-pointer hover:scale-105 active:scale-95"
-            onClick={() => setShowCreate(!showCreate)}
-          >
-            {showCreate ? <FiX size={16} /> : <FiPlus size={16} />}
-            {showCreate ? 'Đóng' : 'Tạo lịch trình'}
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white border-none cursor-pointer hover:scale-105 active:scale-95 transition-all"
+              style={{ background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', boxShadow: '0 4px 14px rgba(139,92,246,0.35)' }}
+              onClick={() => navigate('/trips/ai')}
+            >
+              <FiZap size={15} />
+              ✨ AI Tạo Lịch Trình VIP
+            </button>
+            <button
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-500/25 border-none cursor-pointer hover:scale-105 active:scale-95"
+              onClick={() => setShowCreate(!showCreate)}
+            >
+              {showCreate ? <FiX size={16} /> : <FiPlus size={16} />}
+              {showCreate ? 'Đóng' : 'Tạo lịch trình'}
+            </button>
+          </div>
         </div>
 
         {/* Create form */}

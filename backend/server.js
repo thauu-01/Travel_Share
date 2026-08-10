@@ -19,6 +19,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const setupSocket = require('./sockets/notification');
 
@@ -66,6 +67,7 @@ app.use('/api/chat', chatLimiter, chatRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Health check
 app.get(['/', '/api/health'], (req, res) => {

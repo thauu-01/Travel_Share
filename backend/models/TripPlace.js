@@ -4,7 +4,8 @@ const { getNextSequenceValue } = require('./counter');
 const tripPlaceSchema = new mongoose.Schema({
   _id: Number,
   trip_day_id: { type: Number, ref: 'TripDay', required: true },
-  place_id: { type: Number, ref: 'Place', required: true },
+  place_id: { type: Number, ref: 'Place', default: null },           // null nếu là địa điểm AI tự gợi ý
+  custom_place_name: { type: String, default: null },                 // Tên địa điểm AI khi không khớp DB
   order_index: { type: Number, default: 0 },
   note: { type: String, default: null }
 }, {

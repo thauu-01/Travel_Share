@@ -13,6 +13,7 @@ const TripPlace = require('./TripPlace');
 const Notification = require('./Notification');
 const Report = require('./Report');
 const ChatMessage = require('./ChatMessage');
+const Payment = require('./Payment');
 
 module.exports = {
   mongoose,
@@ -29,5 +30,6 @@ module.exports = {
   TripPlace,
   Notification,
   Report,
-  ChatMessage
+  ChatMessage,
+  Payment
 };

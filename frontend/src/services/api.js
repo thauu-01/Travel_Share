@@ -133,6 +133,12 @@ export const tripAPI = {
   deleteDay: (tripId, dayId) => API.delete(`/trips/${tripId}/days/${dayId}`),
   addPlace: (tripId, dayId, data) => API.post(`/trips/${tripId}/days/${dayId}/places`, data),
   removePlace: (tripId, dayId, placeId) => API.delete(`/trips/${tripId}/days/${dayId}/places/${placeId}`),
+  generateAI: (data) => API.post('/trips/generate-ai', data),
+};
+
+export const paymentAPI = {
+  createPaymentUrl: (packageId = 'ai_5credits') => API.post('/payment/vnpay-create', { packageId }),
+  getStatus: (txn_ref) => API.get(`/payment/status/${txn_ref}`),
 };
 
 export const userAPI = {
@@ -188,6 +194,8 @@ export const adminAPI = {
   getSupportChats: () => API.get('/chat/admin/threads'),
   getChatHistory: (userId) => API.get(`/chat/admin/${userId}`),
   sendAdminMessage: (userId, data) => API.post(`/chat/admin/${userId}/send`, data),
+  // Transactions
+  getTransactions: (params) => API.get('/payment/admin/transactions', { params }),
 };
 
 export const chatAPI = {
@@ -200,3 +208,6 @@ export const reportAPI = {
 };
 
 export default API;
+
+
+

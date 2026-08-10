@@ -1,20 +1,25 @@
 const router = require('express').Router();
 const trip = require('../controllers/TripController');
-const { authenticate, optionalAuth } = require('../middlewares/auth');
+const { authenticate, optionalAuth, auth } = require('../middlewares/auth');
 
-router.get('/my-trips', authenticate, trip.getMyTrips);
-router.get('/', authenticate, trip.getAll);
+const authMiddleware = authenticate || auth;
+
+router.get('/my-trips', authMiddleware, trip.getMyTrips);
+router.get('/', authMiddleware, trip.getAll);
 router.get('/:id', optionalAuth, trip.getById);
 router.get('/:id/days', optionalAuth, trip.getDays);
-router.post('/', authenticate, trip.create);
-router.put('/:id', authenticate, trip.update);
-router.delete('/:id', authenticate, trip.delete);
+router.post('/', authMiddleware, trip.create);
+router.put('/:id', authMiddleware, trip.update);
+router.delete('/:id', authMiddleware, trip.delete);
 
-router.post('/:id/days', authenticate, trip.addDay);
-router.patch('/:id/days/:dayId', authenticate, trip.updateDay);
-router.delete('/:id/days/:dayId', authenticate, trip.deleteDay);
+router.post('/generate-ai', authMiddleware, trip.generateAITrip);
 
-router.post('/:tripId/days/:dayId/places', authenticate, trip.addPlaceToDay);
-router.delete('/:tripId/days/:dayId/places/:placeId', authenticate, trip.removePlaceFromDay);
+router.post('/:id/days', authMiddleware, trip.addDay);
+router.patch('/:id/days/:dayId', authMiddleware, trip.updateDay);
+router.delete('/:id/days/:dayId', authMiddleware, trip.deleteDay);
+
+router.post('/:tripId/days/:dayId/places', authMiddleware, trip.addPlaceToDay);
+router.delete('/:tripId/days/:dayId/places/:placeId', authMiddleware, trip.removePlaceFromDay);
 
 module.exports = router;
+

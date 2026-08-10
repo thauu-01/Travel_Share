@@ -1,4 +1,5 @@
 const { Trip, TripDay, TripPlace, Place, Post } = require('../models');
+const { getNextSequenceValue } = require('../models/counter');
 
 class TripController {
   // GET /api/trips — Lấy tất cả lịch trình của user hiện tại
@@ -378,6 +379,202 @@ class TripController {
       res.status(500).json({ success: false, message: 'Lỗi server' });
     }
   }
+
+  // POST /api/trips/generate-ai — AI Tạo Lịch Trình VIP
+  async generateAITrip(req, res) {
+    const { province, total_days, budget, style } = req.body;
+    const userId = req.user.id;
+
+    if (!province || !total_days) {
+      return res.status(400).json({ success: false, message: 'Thiếu địa điểm hoặc số ngày' });
+    }
+
+    // ① Atomic: Trừ 1 credit — chặn race condition (2 tab đồng thời khi còn 1 credit)
+    const user = await require('../models/User').findOneAndUpdate(
+      {
+        _id: userId,
+        $or: [
+          { ai_credits: { $gt: 0 } },
+          { ai_credits: { $exists: false } },
+          { is_vip: true }
+        ]
+      },
+      { $inc: { ai_credits: -1 } },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn đã hết lượt AI Credits. Vui lòng mua thêm gói VIP.',
+        need_purchase: true
+      });
+    }
+
+    // ② Bọc toàn bộ AI call + DB write trong try/catch để hoàn credit nếu lỗi
+    const mongoose = require('../config/database');
+    const session = await mongoose.startSession();
+    try {
+      // Lấy danh sách địa điểm thực tế trong DB theo tỉnh thành
+      const places = await Place.find({ province: new RegExp(province, 'i') }).limit(20);
+
+      // Xây dựng prompt cho Groq AI
+      const placeList = places.length > 0
+        ? places.map(p => `- ${p.name} (${p.address || p.province}, đánh giá: ${p.avg_rating || 'N/A'})`).join('\n')
+        : `Các địa điểm nổi tiếng tại ${province}`;
+
+      const systemPrompt = `Bạn là chuyên gia du lịch Việt Nam. Hãy tạo lịch trình du lịch chi tiết theo yêu cầu.
+Trả về JSON hợp lệ ĐÚNG FORMAT sau (không thêm text nào khác):
+{
+  "title": "Tiêu đề chuyến đi",
+  "description": "Mô tả ngắn",
+  "days": [
+    {
+      "day_number": 1,
+      "note": "Ghi chú cho ngày (sáng/chiều/tối)",
+      "places": [
+        { "name": "Tên địa điểm", "note": "Hoạt động gợi ý" }
+      ]
+    }
+  ]
+}`;
+
+      const userPrompt = `Tạo lịch trình ${total_days} ngày tại ${province}.
+Ngân sách: ${budget || 'linh hoạt'}.
+Phong cách: ${style || 'tổng hợp'}.
+Các địa điểm có trong hệ thống:\n${placeList}`;
+
+      // Gọi Groq AI
+      const Groq = require('groq-sdk');
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      });
+
+      const content = completion.choices[0]?.message?.content || '';
+
+      // Parse JSON từ AI response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('AI response không đúng format JSON');
+      const aiResult = JSON.parse(jsonMatch[0]);
+
+      if (!aiResult.days || !Array.isArray(aiResult.days)) {
+        throw new Error('AI response thiếu trường days');
+      }
+
+      // ③ MongoDB Atlas Transaction — tạo Trip + TripDay + TripPlace atomic
+      session.startTransaction();
+
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(startDate.getDate() + parseInt(total_days) - 1);
+
+      const tripId = await getNextSequenceValue('trips');
+      const [trip] = await Trip.create([{
+        _id: tripId,
+        user_id: userId,
+        title: aiResult.title || `Khám phá ${province} ${total_days} ngày`,
+        description: aiResult.description || `Lịch trình AI tạo tự động cho ${province}`,
+        start_date: startDate,
+        end_date: endDate,
+        total_days: parseInt(total_days),
+        is_public: false
+      }], { session });
+
+      // Tạo TripDay với ID từ counter
+      const createdDays = [];
+      for (const day of aiResult.days) {
+        const dayId = await getNextSequenceValue('trip_days');
+        createdDays.push({
+          _id: dayId,
+          trip_id: trip._id,
+          day_number: day.day_number,
+          date: new Date(startDate.getTime() + (day.day_number - 1) * 86400000),
+          note: day.note || ''
+        });
+      }
+      await TripDay.insertMany(createdDays, { session });
+
+      // Match tên địa điểm AI gợi ý với DB Places (nếu có)
+      const allPlaceNames = aiResult.days.flatMap(d => d.places?.map(p => p.name) || []);
+      const dbPlaces = await Place.find({
+        name: { $in: allPlaceNames.map(n => new RegExp(n, 'i')) }
+      }).session(session);
+      const placeNameMap = {};
+      dbPlaces.forEach(p => { placeNameMap[p.name.toLowerCase()] = p._id; });
+
+      // Tạo TripPlace với ID từ counter
+      const tripPlacesData = [];
+      for (let i = 0; i < aiResult.days.length; i++) {
+        const day = aiResult.days[i];
+        const dayDoc = createdDays[i];
+        if (!day.places || !dayDoc) continue;
+
+        for (let order = 0; order < day.places.length; order++) {
+          const p = day.places[order];
+          const matchedId = Object.keys(placeNameMap).find(key =>
+            p.name.toLowerCase().includes(key) || key.includes(p.name.toLowerCase())
+          );
+          const placeId = await getNextSequenceValue('trip_places');
+          tripPlacesData.push({
+            _id: placeId,
+            trip_day_id: dayDoc._id,
+            place_id: matchedId ? placeNameMap[matchedId] : null,
+            custom_place_name: matchedId ? null : p.name,
+            note: p.note || '',
+            order_index: order
+          });
+        }
+      }
+
+      if (tripPlacesData.length > 0) {
+        await TripPlace.insertMany(tripPlacesData, { session });
+      }
+
+      await session.commitTransaction();
+
+      // Lấy trip đầy đủ để trả về
+      const fullTrip = await Trip.findById(trip._id)
+        .populate({
+          path: 'days',
+          options: { sort: { day_number: 1 } },
+          populate: { path: 'places', populate: { path: 'place', select: 'id name province latitude longitude' } }
+        });
+
+      return res.json({
+        success: true,
+        message: `🎉 AI đã tạo lịch trình ${total_days} ngày tại ${province} thành công!`,
+        data: fullTrip,
+        ai_credits_remaining: user.is_vip ? null : Math.max(0, user.ai_credits - 1)
+      });
+
+    } catch (err) {
+      // Rollback MongoDB transaction
+      try { await session.abortTransaction(); } catch (_) {}
+
+      // ④ Hoàn credit nếu không phải VIP (VIP không bị trừ thật sự về nghiệp vụ)
+      if (!user.is_vip) {
+        await require('../models/User').findByIdAndUpdate(userId, { $inc: { ai_credits: 1 } });
+      }
+
+      console.error('generateAITrip error:', err.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Tạo lịch trình AI thất bại. Credit đã được hoàn lại.',
+        error: err.message
+      });
+    } finally {
+      session.endSession();
+    }
+  }
 }
 
 module.exports = new TripController();
+

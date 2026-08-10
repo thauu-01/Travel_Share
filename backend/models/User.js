@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
   bio: { type: String, default: null },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   is_active: { type: Boolean, default: true },
+  is_vip: { type: Boolean, default: false },
+  ai_credits: { type: Number, default: 1 },
   otp_code: { type: String, default: null },
   otp_expires_at: { type: Date, default: null }
 }, {
