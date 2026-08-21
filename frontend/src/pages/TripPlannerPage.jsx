@@ -61,7 +61,17 @@ export default function TripPlannerPage() {
   const [customLng, setCustomLng] = useState(null);
   const [placeNote, setPlaceNote] = useState('');
 
-  // Nominatim Map Search API
+  // Edit Place / Activity state
+  const [editingPlaceId, setEditingPlaceId] = useState(null);
+  const [editPlaceName, setEditPlaceName] = useState('');
+  const [editPlaceProvince, setEditPlaceProvince] = useState('');
+  const [editPlaceNote, setEditPlaceNote] = useState('');
+  const [savingPlaceEdit, setSavingPlaceEdit] = useState(false);
+  const [editMapSearchQuery, setEditMapSearchQuery] = useState('');
+  const [editMapSuggestions, setEditMapSuggestions] = useState([]);
+  const [showEditMapSuggestions, setShowEditMapSuggestions] = useState(false);
+
+  // Nominatim Map Search API (Add place)
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [mapSuggestions, setMapSuggestions] = useState([]);
   const [showMapSuggestions, setShowMapSuggestions] = useState(false);
@@ -92,7 +102,7 @@ export default function TripPlannerPage() {
     return Math.floor((e - s) / (1000 * 60 * 60 * 24)) + 1;
   })();
 
-  // Nominatim Live Search Effect
+  // Nominatim Live Search Effect (Add place)
   useEffect(() => {
     if (!mapSearchQuery || mapSearchQuery.trim().length < 2) {
       setMapSuggestions([]);
@@ -109,16 +119,53 @@ export default function TripPlannerPage() {
     return () => clearTimeout(timer);
   }, [mapSearchQuery]);
 
+  function extractLocationDetails(item) {
+    const full = item.display_name || '';
+    // Lọc bỏ mã bưu chính và 'Việt Nam' ở cuối để địa chỉ gọn và chuẩn
+    const cleaned = full.replace(/,\s*\d{5,6}\s*(,|$)/g, '$1').replace(/,\s*Việt Nam\s*$/i, '').trim();
+    const parts = cleaned.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (parts.length <= 1) {
+      return { name: parts[0] || cleaned, location: cleaned };
+    }
+    const name = parts[0];
+    const location = parts.slice(1).join(', ');
+    return { name, location };
+  }
+
   function handleSelectMapSuggestion(item) {
-    const parts = item.display_name.split(',');
-    const name = parts[0] ? parts[0].trim() : item.display_name;
-    const prov = item.address?.state || item.address?.city || item.address?.province || (parts[parts.length - 2] ? parts[parts.length - 2].trim() : 'Việt Nam');
+    const { name, location } = extractLocationDetails(item);
     setCustomPlaceName(name);
-    setCustomProvince(prov);
+    setCustomProvince(location);
     setCustomLat(parseFloat(item.lat));
     setCustomLng(parseFloat(item.lon));
     setMapSearchQuery(name);
     setShowMapSuggestions(false);
+  }
+
+  // Nominatim Live Search Effect (Edit place)
+  useEffect(() => {
+    if (!editMapSearchQuery || editMapSearchQuery.trim().length < 2) {
+      setEditMapSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(editMapSearchQuery)}&countrycodes=vn&addressdetails=1&limit=5`)
+        .then(res => res.json())
+        .then(data => {
+          setEditMapSuggestions(data || []);
+        })
+        .catch(() => setEditMapSuggestions([]));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [editMapSearchQuery]);
+
+  function handleSelectEditMapSuggestion(item) {
+    const { name, location } = extractLocationDetails(item);
+    setEditPlaceName(name);
+    setEditPlaceProvince(location);
+    setEditMapSearchQuery('');
+    setShowEditMapSuggestions(false);
   }
 
   // Load places for dropdown
@@ -357,10 +404,59 @@ export default function TripPlannerPage() {
     }
   }
 
+  // Edit place / activity handlers
+  function handleStartEditPlace(tp) {
+    setEditingPlaceId(tp.id);
+    setEditPlaceName(tp.custom_place_name || tp.place?.name || '');
+    setEditPlaceProvince(tp.custom_province || tp.place?.province || tp.place?.address || '');
+    setEditPlaceNote(tp.note || '');
+  }
+
+  async function handleSavePlaceEdit(dayId, tp) {
+    setSavingPlaceEdit(true);
+    try {
+      const payload = {
+        note: editPlaceNote,
+        custom_province: editPlaceProvince
+      };
+      if (!tp.place) {
+        payload.custom_place_name = editPlaceName;
+      }
+      await tripAPI.updatePlace(selectedTrip.id, dayId, tp.id, payload);
+      
+      setSelectedTrip(prev => ({
+        ...prev,
+        days: prev.days.map(d =>
+          d.id === dayId
+            ? {
+                ...d,
+                places: d.places.map(p =>
+                  p.id === tp.id
+                    ? {
+                        ...p,
+                        note: editPlaceNote,
+                        custom_province: editPlaceProvince,
+                        custom_place_name: !tp.place ? editPlaceName : p.custom_place_name
+                      }
+                    : p
+                )
+              }
+            : d
+        )
+      }));
+      setEditingPlaceId(null);
+      toast.success('Đã cập nhật hoạt động!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Không thể cập nhật hoạt động');
+    } finally {
+      setSavingPlaceEdit(false);
+    }
+  }
+
   // Remove place from day
   async function handleRemovePlace(dayId, placeId, tripPlaceId) {
     try {
-      await tripAPI.removePlace(selectedTrip.id, dayId, placeId);
+      await tripAPI.removePlace(selectedTrip.id, dayId, tripPlaceId || placeId);
       setSelectedTrip(prev => ({
         ...prev,
         days: prev.days.map(d =>
@@ -831,24 +927,171 @@ export default function TripPlannerPage() {
                             <div className="ml-13 pl-5 space-y-2.5">
                               {day.places?.length > 0 ? (
                                 day.places.map((tp, pIdx) => (
-                                  <div key={tp.id} className="flex items-start gap-3 p-3.5 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 group hover:border-blue-200 transition-all">
-                                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
-                                      {pIdx + 1}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-sm text-slate-800 truncate">{tp.place?.name || 'Địa điểm'}</div>
-                                      <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                                        <FiMapPin size={10} /> {tp.place?.province || ''}
+                                  <div key={tp.id} className="p-3.5 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 group hover:border-blue-200 transition-all shadow-sm">
+                                    {editingPlaceId === tp.id ? (
+                                      /* Mode Chỉnh sửa Hoạt động */
+                                      <div className="space-y-2.5 animate-in">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs font-bold text-blue-600 flex items-center gap-1.5">
+                                            <FiEdit2 size={12} /> Chỉnh sửa hoạt động #{pIdx + 1}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditingPlaceId(null)}
+                                            className="p-1 text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer"
+                                          >
+                                            <FiX size={14} />
+                                          </button>
+                                        </div>
+
+                                        {/* Tìm kiếm vị trí nhanh từ Bản đồ */}
+                                        <div className="relative">
+                                          <div className="relative">
+                                            <input
+                                              type="text"
+                                              value={editMapSearchQuery}
+                                              onChange={e => {
+                                                setEditMapSearchQuery(e.target.value);
+                                                setShowEditMapSuggestions(true);
+                                              }}
+                                              onFocus={() => setShowEditMapSuggestions(true)}
+                                              placeholder="🔍 Tìm kiếm vị trí trên bản đồ để tự động điền (VD: Chùa Linh Ứng, Sơn Trà...)"
+                                              className="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg border border-blue-200 bg-blue-50/50 text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                            />
+                                            <FiSearch size={13} className="absolute left-2.5 top-2 text-blue-500" />
+                                            {editMapSearchQuery && (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setEditMapSearchQuery('');
+                                                  setShowEditMapSuggestions(false);
+                                                }}
+                                                className="absolute right-2.5 top-1.5 text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer"
+                                              >
+                                                <FiX size={13} />
+                                              </button>
+                                            )}
+                                          </div>
+
+                                          {/* Live Suggestions Dropdown */}
+                                          {showEditMapSuggestions && editMapSuggestions.length > 0 && (
+                                            <div className="absolute top-full left-0 right-0 bg-white border border-blue-200 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto mt-1 divide-y divide-slate-100">
+                                              {editMapSuggestions.map((item, idx) => (
+                                                <div
+                                                  key={idx}
+                                                  onClick={() => handleSelectEditMapSuggestion(item)}
+                                                  className="px-3 py-2 cursor-pointer hover:bg-blue-50 text-xs text-slate-700 transition-colors flex items-center gap-2"
+                                                >
+                                                  <FiMapPin size={12} className="text-blue-500 shrink-0" />
+                                                  <div className="min-w-0 flex-1">
+                                                    <div className="font-semibold text-slate-800 truncate">{item.display_name.split(',')[0]}</div>
+                                                    <div className="text-[10px] text-slate-400 truncate">{item.display_name}</div>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Tên địa điểm</label>
+                                            <input
+                                              type="text"
+                                              value={editPlaceName}
+                                              onChange={e => setEditPlaceName(e.target.value)}
+                                              placeholder="Tên địa điểm..."
+                                              disabled={!!tp.place}
+                                              className="w-full px-3 py-1.5 text-xs rounded-lg border border-blue-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                                              <FiMapPin size={11} className="text-blue-500" /> Vị trí / Địa chỉ chi tiết
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={editPlaceProvince}
+                                              onChange={e => setEditPlaceProvince(e.target.value)}
+                                              placeholder="Ví dụ: Hoàng Sa, Thọ Quang, Sơn Trà, Đà Nẵng..."
+                                              className="w-full px-3 py-1.5 text-xs rounded-lg border border-blue-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[11px] font-semibold text-slate-500 mb-1">Ghi chú / Trải nghiệm chi tiết</label>
+                                          <textarea
+                                            value={editPlaceNote}
+                                            onChange={e => setEditPlaceNote(e.target.value)}
+                                            placeholder="Nhập ghi chú hoạt động, thời gian, chi phí dự kiến..."
+                                            rows={2}
+                                            className="w-full px-3 py-2 text-xs rounded-lg border border-blue-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-sans"
+                                          />
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 pt-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditingPlaceId(null)}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 border-none cursor-pointer transition-colors"
+                                          >
+                                            Hủy
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSavePlaceEdit(day.id, tp)}
+                                            disabled={savingPlaceEdit}
+                                            className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-colors"
+                                          >
+                                            {savingPlaceEdit ? (
+                                              <>
+                                                <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                                Đang lưu...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <FiCheck size={12} /> Lưu thay đổi
+                                              </>
+                                            )}
+                                          </button>
+                                        </div>
                                       </div>
-                                      {tp.note && <div className="text-xs text-slate-500 mt-0.5 italic">{tp.note}</div>}
-                                    </div>
-                                    {isOwner && (
-                                      <button
-                                        onClick={() => handleRemovePlace(day.id, tp.place_id || tp.place?.id, tp.id)}
-                                        className="p-1.5 rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 border-none cursor-pointer"
-                                      >
-                                        <FiX size={13} />
-                                      </button>
+                                    ) : (
+                                      /* Mode Hiển thị */
+                                      <div className="flex items-start gap-3">
+                                        <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
+                                          {pIdx + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-semibold text-sm text-slate-800 truncate">{tp.place?.name || tp.custom_place_name || 'Địa điểm'}</div>
+                                          <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                            <FiMapPin size={10} className="text-blue-500 shrink-0" />
+                                            <span>{tp.place?.province || tp.place?.address || tp.custom_province || 'Địa điểm gợi ý'}</span>
+                                          </div>
+                                          {tp.note && <div className="text-xs text-slate-500 mt-0.5 italic">{tp.note}</div>}
+                                        </div>
+                                        {isOwner && (
+                                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleStartEditPlace(tp)}
+                                              className="p-1.5 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all border-none cursor-pointer"
+                                              title="Chỉnh sửa hoạt động"
+                                            >
+                                              <FiEdit2 size={13} />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleRemovePlace(day.id, tp.place_id || tp.place?.id, tp.id)}
+                                              className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all border-none cursor-pointer"
+                                              title="Xóa hoạt động"
+                                            >
+                                              <FiTrash2 size={13} />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                 ))

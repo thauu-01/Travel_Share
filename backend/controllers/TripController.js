@@ -366,13 +366,50 @@ class TripController {
     }
   }
 
+  // PATCH /api/trips/:tripId/days/:dayId/places/:tripPlaceId — Chỉnh sửa hoạt động/địa điểm trong ngày
+  async updatePlaceInDay(req, res) {
+    try {
+      const { tripPlaceId } = req.params;
+      const { note, custom_place_name, custom_province, order_index } = req.body;
+
+      const tripPlace = await TripPlace.findById(tripPlaceId);
+      if (!tripPlace) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy hoạt động/địa điểm này' });
+      }
+
+      if (note !== undefined) tripPlace.note = note ? note.trim() : null;
+      if (custom_place_name !== undefined) {
+        tripPlace.custom_place_name = custom_place_name ? custom_place_name.trim() : tripPlace.custom_place_name;
+      }
+      if (custom_province !== undefined) {
+        tripPlace.custom_province = custom_province ? custom_province.trim() : null;
+      }
+      if (order_index !== undefined) tripPlace.order_index = parseInt(order_index);
+
+      await tripPlace.save();
+      const full = await TripPlace.findById(tripPlace.id).populate('place');
+
+      res.json({ success: true, message: 'Đã cập nhật hoạt động', data: full });
+    } catch (error) {
+      console.error('UpdatePlaceInDay error:', error);
+      res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+  }
+
   // DELETE /api/trips/:tripId/days/:dayId/places/:placeId — Xóa địa điểm khỏi ngày
   async removePlaceFromDay(req, res) {
     try {
       const tripDay = await TripDay.findById(req.params.dayId);
       if (!tripDay) return res.status(404).json({ success: false, message: 'Không tìm thấy ngày' });
 
-      await TripPlace.deleteMany({ trip_day_id: tripDay.id, place_id: parseInt(req.params.placeId) });
+      const targetId = parseInt(req.params.placeId);
+      if (!isNaN(targetId)) {
+        // Thử xóa theo TripPlace ID trước, nếu không có thì xóa theo place_id
+        const deleted = await TripPlace.findOneAndDelete({ _id: targetId, trip_day_id: tripDay.id });
+        if (!deleted) {
+          await TripPlace.deleteMany({ trip_day_id: tripDay.id, place_id: targetId });
+        }
+      }
       res.json({ success: true, message: 'Đã xóa địa điểm khỏi ngày' });
     } catch (error) {
       console.error('RemovePlaceFromDay error:', error);
@@ -415,41 +452,56 @@ class TripController {
     const mongoose = require('../config/database');
     const session = await mongoose.startSession();
     try {
-      // Lấy danh sách địa điểm thực tế trong DB theo tỉnh thành
-      const places = await Place.find({ province: new RegExp(province, 'i') }).limit(20);
+      // Lấy danh sách địa điểm thực tế trong DB theo tỉnh thành (hỗ trợ alias)
+      const cleanProvince = province.replace(/^(Tỉnh|Thành phố|TP\.?)\s+/i, '').trim();
+      const searchRegex = new RegExp(cleanProvince, 'i');
+      const aliasMap = {
+        'Sapa': 'Lào Cai',
+        'Sa Pa': 'Lào Cai',
+        'Phú Quốc': 'Kiên Giang',
+        'Côn Đảo': 'Bà Rịa',
+        'Hạ Long': 'Quảng Ninh',
+        'Hội An': 'Quảng Nam',
+        'Đà Lạt': 'Lâm Đồng',
+        'Phong Nha': 'Quảng Bình',
+        'Bái Đính': 'Ninh Bình',
+        'Tràng An': 'Ninh Bình',
+        'Mũi Né': 'Bình Thuận',
+        'Sầm Sơn': 'Thanh Hóa'
+      };
+      const aliasRegex = aliasMap[province] ? new RegExp(aliasMap[province], 'i') : null;
 
-      // Xây dựng prompt cho Groq AI
+      const places = await Place.find({
+        $or: [
+          { province: searchRegex },
+          { name: searchRegex },
+          { address: searchRegex },
+          ...(aliasRegex ? [{ province: aliasRegex }, { name: aliasRegex }] : [])
+        ]
+      }).limit(10);
+
+      // Xây dựng prompt cho Groq AI — yêu cầu chuẩn tiếng Việt thuần túy
       const placeList = places.length > 0
-        ? places.map(p => `- ${p.name} (${p.address || p.province}, đánh giá: ${p.avg_rating || 'N/A'})`).join('\n')
+        ? places.map(p => `- ${p.name}`).join('\n')
         : `Các địa điểm nổi tiếng tại ${province}`;
 
-      const systemPrompt = `Bạn là chuyên gia du lịch Việt Nam. Hãy tạo lịch trình du lịch chi tiết theo yêu cầu.
-Trả về JSON hợp lệ ĐÚNG FORMAT sau (không thêm text nào khác):
-{
-  "title": "Tiêu đề chuyến đi",
-  "description": "Mô tả ngắn",
-  "days": [
-    {
-      "day_number": 1,
-      "note": "Ghi chú cho ngày (sáng/chiều/tối)",
-      "places": [
-        { "name": "Tên địa điểm", "note": "Hoạt động gợi ý" }
-      ]
-    }
-  ]
-}`;
+      const systemPrompt = `Bạn là chuyên gia du lịch Việt Nam. Tạo lịch trình du lịch bằng TIẾNG VIỆT chuẩn.
+QUY TẮC BẮT BUỘC:
+1. Tên địa điểm ("name") PHẢI là tiếng Việt thuần túy, ngắn gọn (ví dụ: "Thác Bạc", "Đỉnh Fansipan", "Núi Hàm Rồng", "Bản Cát Cát", "Chợ Sapa"). TUYỆT ĐỐI KHÔNG dùng tiếng Anh hoặc kèm mở ngoặc tiếng Anh (KHÔNG dùng "Silver Waterfall (Thác Bạc)", "Ham Rong Mountain").
+2. Ưu tiên sử dụng chính xác tên các địa điểm trong danh sách gợi ý của hệ thống.
+3. Trả về JSON hợp lệ ĐÚNG FORMAT:
+{"title":"...","description":"...","days":[{"day_number":1,"note":"...","places":[{"name":"...","note":"..."}]}]}`;
 
-      const userPrompt = `Tạo lịch trình ${total_days} ngày tại ${province}.
-Ngân sách: ${budget || 'linh hoạt'}.
-Phong cách: ${style || 'tổng hợp'}.
-Các địa điểm có trong hệ thống:\n${placeList}`;
+      const userPrompt = `Lịch trình ${total_days} ngày tại ${province}. Ngân sách: ${budget || 'linh hoạt'}. Phong cách: ${style || 'tổng hợp'}.
+Danh sách địa điểm gợi ý trong hệ thống:
+${placeList}`;
 
       // Gọi Groq AI
       const Groq = require('groq-sdk');
       const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
       const completion = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'groq/compound-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -502,13 +554,10 @@ Các địa điểm có trong hệ thống:\n${placeList}`;
       }
       await TripDay.insertMany(createdDays, { session });
 
-      // Match tên địa điểm AI gợi ý với DB Places (nếu có)
-      const allPlaceNames = aiResult.days.flatMap(d => d.places?.map(p => p.name) || []);
-      const dbPlaces = await Place.find({
-        name: { $in: allPlaceNames.map(n => new RegExp(n, 'i')) }
-      }).session(session);
-      const placeNameMap = {};
-      dbPlaces.forEach(p => { placeNameMap[p.name.toLowerCase()] = p._id; });
+      // Match tên địa điểm AI gợi ý với DB Places linh hoạt
+      const allDbPlaces = await Place.find({}).session(session);
+      const removeAccents = (str) =>
+        (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 
       // Tạo TripPlace với ID từ counter
       const tripPlacesData = [];
@@ -519,15 +568,24 @@ Các địa điểm có trong hệ thống:\n${placeList}`;
 
         for (let order = 0; order < day.places.length; order++) {
           const p = day.places[order];
-          const matchedId = Object.keys(placeNameMap).find(key =>
-            p.name.toLowerCase().includes(key) || key.includes(p.name.toLowerCase())
-          );
+          // Bỏ phần mở ngoặc tiếng Anh nếu có
+          const cleanAiName = (p.name || '').replace(/\(.*\)/g, '').trim();
+          const pNorm = removeAccents(cleanAiName);
+
+          const matchedPlace = allDbPlaces.find(dbP => {
+            const dbNorm = removeAccents(dbP.name);
+            return dbNorm === pNorm ||
+                   (pNorm.length >= 3 && dbNorm.includes(pNorm)) ||
+                   (dbNorm.length >= 3 && pNorm.includes(dbNorm));
+          });
+
           const placeId = await getNextSequenceValue('trip_places');
           tripPlacesData.push({
             _id: placeId,
             trip_day_id: dayDoc._id,
-            place_id: matchedId ? placeNameMap[matchedId] : null,
-            custom_place_name: matchedId ? null : p.name,
+            place_id: matchedPlace ? matchedPlace._id : null,
+            custom_place_name: matchedPlace ? null : cleanAiName,
+            custom_province: matchedPlace ? null : province,
             note: p.note || '',
             order_index: order
           });

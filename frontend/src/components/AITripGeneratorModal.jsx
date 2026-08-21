@@ -102,7 +102,7 @@ export default function AITripGeneratorModal({ onClose, onTripCreated }) {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">✨ AI Tạo Lịch Trình VIP</h2>
-              <p className="text-white/60 text-xs mt-0.5">Groq Llama 3.3 70B · Địa điểm thực tế</p>
+              <p className="text-white/60 text-xs mt-0.5">Groq Compound Mini · Địa điểm thực tế</p>
             </div>
           </div>
 

@@ -198,7 +198,7 @@ Hãy sử dụng dữ liệu thực tế từ Database trên (nếu câu hỏi l
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'groq/compound-mini',
           messages: [
             { role: 'system', content: `Bạn là trợ lý AI du lịch Việt Nam của TravelShare.\nDỮ LIỆU DATABASE HỆ THỐNG THỰC TẾ:\n${dbContext}` },
             { role: 'user', content: userMessage }

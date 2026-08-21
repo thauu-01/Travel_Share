@@ -140,7 +140,7 @@ export default function AITripPlannerPage() {
           <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
             <div>
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 border border-white/30 text-white text-xs font-bold mb-3 backdrop-blur-md shadow-sm">
-                <FiZap size={13} className="text-amber-300" /> Sức Mạnh Groq AI Llama 3.3 70B
+                <FiZap size={13} className="text-amber-300" /> Sức Mạnh Groq Compound Mini
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-md">
                 ✨ Trợ Lý AI Tạo Lịch Trình Du Lịch

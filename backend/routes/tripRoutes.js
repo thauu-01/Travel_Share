@@ -19,6 +19,7 @@ router.patch('/:id/days/:dayId', authMiddleware, trip.updateDay);
 router.delete('/:id/days/:dayId', authMiddleware, trip.deleteDay);
 
 router.post('/:tripId/days/:dayId/places', authMiddleware, trip.addPlaceToDay);
+router.patch('/:tripId/days/:dayId/places/:tripPlaceId', authMiddleware, trip.updatePlaceInDay);
 router.delete('/:tripId/days/:dayId/places/:placeId', authMiddleware, trip.removePlaceFromDay);
 
 module.exports = router;

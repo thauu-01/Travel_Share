@@ -449,9 +449,9 @@ export default function PostDetailPage() {
                                     {pIdx + 1}
                                   </span>
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-bold text-slate-800 text-sm">{tp.place?.name || 'Địa điểm'}</div>
+                                    <div className="font-bold text-slate-800 text-sm">{tp.place?.name || tp.custom_place_name || 'Địa điểm'}</div>
                                     <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                                      <FiMapPin size={11} className="text-blue-500" /> {tp.place?.province || 'Việt Nam'}
+                                      <FiMapPin size={11} className="text-blue-500 shrink-0" /> {tp.place?.province || tp.place?.address || tp.custom_province || 'Địa điểm gợi ý'}
                                     </div>
                                     {tp.note && <div className="text-xs text-slate-500 italic mt-1 bg-slate-50 p-2 rounded-lg">{tp.note}</div>}
                                   </div>

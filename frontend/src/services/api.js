@@ -132,6 +132,7 @@ export const tripAPI = {
   updateDay: (tripId, dayId, data) => API.patch(`/trips/${tripId}/days/${dayId}`, data),
   deleteDay: (tripId, dayId) => API.delete(`/trips/${tripId}/days/${dayId}`),
   addPlace: (tripId, dayId, data) => API.post(`/trips/${tripId}/days/${dayId}/places`, data),
+  updatePlace: (tripId, dayId, tripPlaceId, data) => API.patch(`/trips/${tripId}/days/${dayId}/places/${tripPlaceId}`, data),
   removePlace: (tripId, dayId, placeId) => API.delete(`/trips/${tripId}/days/${dayId}/places/${placeId}`),
   generateAI: (data) => API.post('/trips/generate-ai', data),
 };

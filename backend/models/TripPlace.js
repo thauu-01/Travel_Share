@@ -6,6 +6,7 @@ const tripPlaceSchema = new mongoose.Schema({
   trip_day_id: { type: Number, ref: 'TripDay', required: true },
   place_id: { type: Number, ref: 'Place', default: null },           // null nếu là địa điểm AI tự gợi ý
   custom_place_name: { type: String, default: null },                 // Tên địa điểm AI khi không khớp DB
+  custom_province: { type: String, default: null },                   // Tỉnh thành / vị trí tùy chỉnh
   order_index: { type: Number, default: 0 },
   note: { type: String, default: null }
 }, {
