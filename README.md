@@ -1,5 +1,4 @@
-# Đồ Án Môn Học Lập Trình Web Nâng Cao
-# Đề tài: TravelShare – Nền Tảng Chia Sẻ Hành Trình Du Lịch
+# TravelShare – Nền Tảng Chia Sẻ Hành Trình Du Lịch
 
 ## Giới thiệu chung
 
