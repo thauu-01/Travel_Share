@@ -196,10 +196,16 @@ export default function Navbar() {
                           className={`flex items-start gap-3 px-4 py-3.5 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${!n.is_read ? 'bg-blue-50/50' : ''}`}
                           onClick={() => handleMarkRead(n)}
                         >
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-[0.7rem] overflow-hidden shrink-0">
-                            {n.fromUser?.avatar_url
-                              ? <img src={n.fromUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                              : (n.fromUser?.full_name?.[0] || '?')}
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-[0.75rem] overflow-hidden shrink-0 shadow-sm">
+                            {n.fromUser?.avatar_url ? (
+                              <img src={n.fromUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : n.fromUser?.full_name ? (
+                              n.fromUser.full_name[0].toUpperCase()
+                            ) : n.type === 'system' ? (
+                              '📢'
+                            ) : (
+                              '🔔'
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-slate-800 leading-snug">{n.message}</div>

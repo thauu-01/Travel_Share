@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Provider, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 import { FiHeadphones, FiSend, FiX } from 'react-icons/fi';
+import { io } from 'socket.io-client';
 import store from './store';
 import { chatAPI } from './services/api';
 import Navbar from './components/Navbar';
@@ -125,8 +126,10 @@ function AppContent() {
   ]);
   const [draft, setDraft] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [adminOnline, setAdminOnline] = useState(false);
 
   const chatEndRef = useRef(null);
+  const chatSocketRef = useRef(null);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -137,6 +140,31 @@ function AppContent() {
       scrollToBottom();
     }
   }, [messages, isChatOpen, isLoading]);
+
+  // Connect socket and listen for admin messages when user is logged in
+  useEffect(() => {
+    if (!isAuthenticated || !user || user.role === 'admin') return;
+
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+    chatSocketRef.current = io(socketUrl);
+    chatSocketRef.current.emit('join', user.id);
+
+    // Listen for admin reply in real-time
+    chatSocketRef.current.on('new_admin_message', (msg) => {
+      setMessages(prev => [...prev, {
+        id: msg._id || msg.id || Date.now(),
+        sender: 'admin',
+        text: msg.message
+      }]);
+      setAdminOnline(true);
+    });
+
+    return () => {
+      if (chatSocketRef.current) {
+        chatSocketRef.current.disconnect();
+      }
+    };
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (!isChatOpen || !showSupportButton || !isAuthenticated) return;
@@ -184,6 +212,7 @@ function AppContent() {
           text: aiMessage.message
         }]);
       }
+      // If no AI message, admin is online and will reply manually via socket
     } catch (error) {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
@@ -241,7 +270,10 @@ function AppContent() {
               <div className="px-4 py-3.5 bg-gradient-to-r from-blue-600 to-violet-600 text-white flex items-center justify-between">
                 <div>
                   <div className="font-bold">Hỗ trợ TravelShare</div>
-                  <div className="text-xs opacity-90">Admin sẽ phản hồi trong vài phút</div>
+                  <div className="text-xs opacity-90 flex items-center gap-1.5">
+                    <span className={`inline-block w-2 h-2 rounded-full ${adminOnline ? 'bg-green-400' : 'bg-white/40'}`}></span>
+                    {adminOnline ? 'Admin đang online 🟢' : 'Trợ lý AI sẵn sàng hỗ trợ bạn'}
+                  </div>
                 </div>
                 <button
                   onClick={() => setIsChatOpen(false)}
@@ -274,7 +306,7 @@ function AppContent() {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Nhập tin nhắn..."
-                  className="flex-1 border border-slate-200 rounded-full px-3 py-2.5 text-sm outline-none focus:border-blue-500"
+                  className="flex-1 border border-slate-300 rounded-full px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
                 <button
                   type="submit"

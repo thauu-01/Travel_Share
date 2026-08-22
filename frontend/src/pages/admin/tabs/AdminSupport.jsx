@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
-import { FiSend, FiMessageSquare, FiCpu, FiUser } from 'react-icons/fi';
+import { FiSend, FiMessageSquare, FiCpu, FiUser, FiWifi } from 'react-icons/fi';
+import { io } from 'socket.io-client';
 
 export default function AdminSupport() {
   const [conversations, setConversations] = useState([]);
@@ -10,11 +11,47 @@ export default function AdminSupport() {
   const [newMessage, setNewMessage] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(false);
   const chatBottomRef = useRef(null);
+  const socketRef = useRef(null);
+  const selectedUserIdRef = useRef(null);
 
+  // Keep ref in sync with state so socket callbacks always read latest value
+  useEffect(() => {
+    selectedUserIdRef.current = selectedUserId;
+  }, [selectedUserId]);
+
+  // Setup Socket.IO connection for admin support dashboard
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+    socketRef.current = io(socketUrl);
+
+    // Tell server this admin is now online in support room
+    socketRef.current.emit('admin_join_support');
+
+    // Listen for new messages from any user
+    socketRef.current.on('new_user_message', ({ userId, message }) => {
+      // Update message list if this conversation is open
+      if (selectedUserIdRef.current === userId) {
+        setMessages(prev => {
+          // Avoid duplicates (if we already appended it optimistically)
+          const exists = prev.some(m => String(m._id) === String(message._id) || String(m.id) === String(message.id));
+          if (exists) return prev;
+          return [...prev, message];
+        });
+      }
+      // Always refresh conversation list to update last message & unread badge
+      fetchConversations();
+    });
+
+    return () => {
+      socketRef.current.emit('admin_leave_support');
+      socketRef.current.disconnect();
+    };
+  }, []);
+
+  // Initial load + refresh list every 30s as fallback
   useEffect(() => {
     fetchConversations();
-    // Auto refresh conversation list every 15 seconds
-    const interval = setInterval(fetchConversations, 15000);
+    const interval = setInterval(fetchConversations, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -42,7 +79,6 @@ export default function AdminSupport() {
     try {
       const res = await adminAPI.getChatHistory(userId);
       setMessages(res.data.data);
-      // Refresh conversations list to update unread badge counts
       fetchConversations();
     } catch (err) {
       toast.error('Lỗi tải lịch sử chat');
@@ -60,7 +96,13 @@ export default function AdminSupport() {
 
     try {
       const res = await adminAPI.sendAdminMessage(selectedUserId, { message: textToSend });
-      setMessages(prev => [...prev, res.data.data]);
+      // Append admin message immediately (socket will also broadcast but we deduplicate)
+      setMessages(prev => {
+        const msg = res.data.data;
+        const exists = prev.some(m => String(m._id) === String(msg._id) || String(m.id) === String(msg.id));
+        if (exists) return prev;
+        return [...prev, msg];
+      });
     } catch (err) {
       toast.error('Gửi tin nhắn thất bại');
     }
@@ -81,6 +123,10 @@ export default function AdminSupport() {
         <div className="p-4 border-b border-indigo-50 flex items-center gap-2 text-slate-800 bg-white">
           <FiMessageSquare className="text-indigo-600" />
           <h3 className="m-0 text-sm font-bold">Hộp thư hỗ trợ</h3>
+          {/* Online indicator */}
+          <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
+            <FiWifi size={11} /> Live
+          </span>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -147,14 +193,14 @@ export default function AdminSupport() {
                   const isAI = m.sender_type === 'ai';
                   return (
                     <div
-                      key={m.id}
+                      key={m._id || m.id}
                       className={`flex w-full ${isAdmin ? 'justify-end' : 'justify-start'}`}
                     >
                       <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                        isAdmin 
-                          ? 'bg-blue-600 text-white rounded-br-sm' 
-                          : isAI 
-                            ? 'bg-emerald-50 text-slate-800 border border-emerald-100 rounded-bl-sm' 
+                        isAdmin
+                          ? 'bg-blue-600 text-white rounded-br-sm'
+                          : isAI
+                            ? 'bg-emerald-50 text-slate-800 border border-emerald-100 rounded-bl-sm'
                             : 'bg-white text-slate-800 border border-slate-100 rounded-bl-sm'
                       }`}>
                         {/* Header badge tag for AI and Admin */}
@@ -184,7 +230,7 @@ export default function AdminSupport() {
             <form onSubmit={handleSend} className="p-4 border-t border-indigo-50 flex gap-3 bg-white">
               <input
                 type="text"
-                className="flex-1 px-4 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
                 placeholder="Nhập nội dung phản hồi tới khách hàng..."
                 value={newMessage}
                 onChange={e => setNewMessage(e.target.value)}

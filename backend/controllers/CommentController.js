@@ -47,7 +47,7 @@ class CommentController {
         .populate('user', 'id full_name avatar_url');
 
       // Create notification
-      const fromUser = await User.findById(req.user.id).select('full_name');
+      const fromUser = await User.findById(req.user.id).select('id full_name avatar_url');
       const io = req.app.get('io');
 
       if (parent_id) {
@@ -59,9 +59,13 @@ class CommentController {
             from_user_id: req.user.id,
             type: 'reply',
             post_id: parseInt(postId),
-            message: `${fromUser.full_name} đã trả lời bình luận của bạn`
+            message: `${fromUser?.full_name || 'Ai đó'} đã trả lời bình luận của bạn`
           });
-          if (io) io.to(`user_${parentComment.user_id}`).emit('notification', notification);
+          if (io) {
+            const notifObj = notification.toObject ? notification.toObject() : { ...notification._doc };
+            notifObj.fromUser = fromUser;
+            io.to(`user_${parentComment.user_id}`).emit('notification', notifObj);
+          }
         }
       } else if (post.user_id !== req.user.id) {
         // Comment notification to post author
@@ -70,9 +74,13 @@ class CommentController {
           from_user_id: req.user.id,
           type: 'comment',
           post_id: parseInt(postId),
-          message: `${fromUser.full_name} đã bình luận bài viết của bạn`
+          message: `${fromUser?.full_name || 'Ai đó'} đã bình luận bài viết của bạn`
         });
-        if (io) io.to(`user_${post.user_id}`).emit('notification', notification);
+        if (io) {
+          const notifObj = notification.toObject ? notification.toObject() : { ...notification._doc };
+          notifObj.fromUser = fromUser;
+          io.to(`user_${post.user_id}`).emit('notification', notifObj);
+        }
       }
 
       res.status(201).json({ success: true, message: 'Bình luận thành công', data: fullComment });

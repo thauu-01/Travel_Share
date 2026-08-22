@@ -260,16 +260,39 @@ class ChatController {
         return res.status(400).json({ success: false, message: 'Nội dung tin nhắn không được để trống' });
       }
 
-      const aiResponseText = await getAIReply(message.trim());
+      // Get Socket.IO instance and check if any admin is online in support dashboard
+      const io = req.app.get('io');
+      const isAdminOnline = io && io.adminSockets && io.adminSockets.size > 0;
 
       if (req.user) {
-        // Save to DB for logged in user
+        // Save user message to DB
         const userMsg = await ChatMessage.create({
           user_id: req.user.id,
           sender_type: 'user',
           message: message.trim()
         });
 
+        // Emit real-time event to admin support dashboard
+        if (io) {
+          io.to('admin_support').emit('new_user_message', {
+            userId: req.user.id,
+            message: userMsg
+          });
+        }
+
+        if (isAdminOnline) {
+          // Admin is online – do NOT generate AI reply, just return user message
+          return res.status(201).json({
+            success: true,
+            data: {
+              userMessage: userMsg,
+              aiMessage: null
+            }
+          });
+        }
+
+        // Admin is offline – generate AI reply
+        const aiResponseText = await getAIReply(message.trim());
         const aiMsg = await ChatMessage.create({
           user_id: req.user.id,
           sender_type: 'ai',
@@ -284,7 +307,8 @@ class ChatController {
           }
         });
       } else {
-        // For guest user (not logged in)
+        // For guest user (not logged in) – always use AI
+        const aiResponseText = await getAIReply(message.trim());
         return res.status(200).json({
           success: true,
           data: {

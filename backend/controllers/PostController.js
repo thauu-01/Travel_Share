@@ -389,19 +389,21 @@ class PostController {
 
         // Create notification if liker is not the post owner
         if (post.user_id !== userId) {
-          const fromUser = await User.findById(userId).select('full_name');
+          const fromUser = await User.findById(userId).select('id full_name avatar_url');
           const notification = await Notification.create({
             user_id: post.user_id,
             from_user_id: userId,
             type: 'like',
             post_id: postId,
-            message: `${fromUser.full_name} đã thích bài viết của bạn`
+            message: `${fromUser?.full_name || 'Ai đó'} đã thích bài viết của bạn`
           });
 
           // Emit real-time notification
           const io = req.app.get('io');
           if (io) {
-            io.to(`user_${post.user_id}`).emit('notification', notification);
+            const notifObj = notification.toObject ? notification.toObject() : { ...notification._doc };
+            notifObj.fromUser = fromUser;
+            io.to(`user_${post.user_id}`).emit('notification', notifObj);
           }
         }
 

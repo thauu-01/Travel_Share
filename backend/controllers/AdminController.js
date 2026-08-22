@@ -216,7 +216,10 @@ class AdminController {
 
         const io = req.app.get('io');
         if (io) {
-          io.to(`user_${post.user_id}`).emit('notification', notification);
+          const notifObj = notification.toObject ? notification.toObject() : { ...notification._doc };
+          const adminUser = await User.findById(req.user.id).select('id full_name avatar_url');
+          notifObj.fromUser = adminUser;
+          io.to(`user_${post.user_id}`).emit('notification', notifObj);
         }
       }
 
@@ -253,7 +256,10 @@ class AdminController {
 
         const io = req.app.get('io');
         if (io) {
-          io.to(`user_${post.user_id}`).emit('notification', notification);
+          const notifObj = notification.toObject ? notification.toObject() : { ...notification._doc };
+          const adminUser = await User.findById(req.user.id).select('id full_name avatar_url');
+          notifObj.fromUser = adminUser;
+          io.to(`user_${post.user_id}`).emit('notification', notifObj);
         }
       }
 
@@ -599,6 +605,7 @@ class AdminController {
       const io = req.app.get('io');
 
       const fullMessage = `${title}: ${message}`;
+      const senderAdmin = await User.findById(req.user.id).select('id full_name avatar_url');
 
       for (const targetUser of users) {
         const nextId = await getNextSequenceValue('notifications');
@@ -611,7 +618,9 @@ class AdminController {
         });
 
         if (io) {
-          io.to(`user_${targetUser._id}`).emit('notification', notif);
+          const notifObj = notif.toObject ? notif.toObject() : { ...notif._doc };
+          notifObj.fromUser = senderAdmin;
+          io.to(`user_${targetUser._id}`).emit('notification', notifObj);
         }
       }
 
@@ -685,6 +694,17 @@ class AdminController {
         sender_type: 'admin',
         message: message.trim()
       });
+
+      // Emit real-time message to the target user's chat widget
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user_${userId}`).emit('new_admin_message', chatMessage);
+        // Also broadcast to admin support room so other admin tabs update
+        io.to('admin_support').emit('new_user_message', {
+          userId,
+          message: chatMessage
+        });
+      }
 
       res.status(201).json({ success: true, data: chatMessage });
     } catch (error) {
