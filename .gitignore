@@ -28,6 +28,7 @@ logs/
 # Temporary
 tmp/
 temp/
+legacy_backup/
 
 # Build
 dist/
