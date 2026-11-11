@@ -1,6 +1,5 @@
 import axios from 'axios';
-import { store } from '../store';
-import { logout } from '../store/authSlice';
+import { useAuthStore } from '../store/useAuthStore';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -74,9 +73,9 @@ API.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${token}`;
         return API(originalRequest);
       } catch (refreshError) {
-        // Refresh token expired/missing → dispatch Redux logout cleanly
+        // Refresh token expired/missing → logout cleanly via Zustand
         processQueue(refreshError, null);
-        store.dispatch(logout());
+        useAuthStore.getState().logout();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

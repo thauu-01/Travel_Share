@@ -1,11 +1,3 @@
-import { configureStore } from '@reduxjs/toolkit';
-import authSlice from './authSlice';
-
-const store = configureStore({
-  reducer: {
-    auth: authSlice,
-  },
-});
-
-export { store };
-export default store;
+export { useAuthStore } from './useAuthStore';
+export { useTripStore } from './useTripStore';
+export { useNotificationStore } from './useNotificationStore';
