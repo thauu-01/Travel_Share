@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../store/authSlice';
+import { useAuthStore } from '../store/useAuthStore';
 import { notificationAPI } from '../services/api';
 import { io } from 'socket.io-client';
 import { FiBell, FiPlus, FiSearch, FiLogOut, FiCompass, FiCalendar, FiUser, FiShield } from 'react-icons/fi';
 
 export default function Navbar() {
-  const { isAuthenticated, user } = useSelector(state => state.auth);
-  const dispatch = useDispatch();
+  const { isAuthenticated, user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [notifications, setNotifications] = useState([]);
@@ -86,7 +84,7 @@ export default function Navbar() {
   const handleLogout = () => {
     setShowUserMenu(false);
     setShowNotif(false);
-    dispatch(logout());
+    logout();
     navigate('/');
   };
 

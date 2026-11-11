@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { loginSuccess } from '../store/authSlice';
+import { useAuthStore } from '../store/useAuthStore';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
@@ -10,7 +9,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
+  const { loginSuccess } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,7 +18,7 @@ export default function LoginPage() {
     try {
       const res = await authAPI.login(form);
       const userData = res.data.data;
-      dispatch(loginSuccess(userData));
+      loginSuccess(userData);
       toast.success('Đăng nhập thành công!');
       navigate(userData?.user?.role === 'admin' ? '/admin' : '/');
     } catch (err) {

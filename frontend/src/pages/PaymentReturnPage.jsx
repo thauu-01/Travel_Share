@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useAuthStore } from '../store/useAuthStore';
 import { paymentAPI, authAPI } from '../services/api';
-import { updateUser } from '../store/authSlice';
 import { FiCheckCircle, FiXCircle, FiClock, FiZap, FiArrowRight, FiRefreshCw, FiHome } from 'react-icons/fi';
 
 const POLL_INTERVAL_MS = 1500;
@@ -11,8 +10,7 @@ const POLL_MAX_TRIES = 12;
 export default function PaymentReturnPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { isAuthenticated } = useSelector(s => s.auth);
+  const { isAuthenticated, updateUser } = useAuthStore();
 
   const txn_ref = searchParams.get('txn_ref') || searchParams.get('vnp_TxnRef');
   const vnp_ResponseCode = searchParams.get('vnp_ResponseCode');
@@ -58,7 +56,7 @@ export default function PaymentReturnPage() {
         setStatus(data.status); // success | failed | expired
         if (data.status === 'success') {
           authAPI.getMe().then(meRes => {
-            if (meRes.data?.data) dispatch(updateUser(meRes.data.data));
+            if (meRes.data?.data) updateUser(meRes.data.data);
           }).catch(() => {});
         }
       }

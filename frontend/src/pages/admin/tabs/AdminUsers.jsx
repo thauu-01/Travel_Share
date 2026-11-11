@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useSelector } from 'react-redux';
+import { useAuthStore } from '../../../store/useAuthStore';
 import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import { FiSearch, FiCheck, FiSlash, FiUserPlus, FiUserMinus, FiShield, FiX } from 'react-icons/fi';
 
 export default function AdminUsers() {
-  const { user: currentUser } = useSelector(state => state.auth);
+  const { user: currentUser } = useAuthStore();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

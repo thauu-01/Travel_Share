@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { postAPI, recommendationAPI, categoryAPI } from '../services/api';
 import PostCard from '../components/PostCard';
-import { useSelector } from 'react-redux';
+import { useAuthStore } from '../store/useAuthStore';
 import { FiTrendingUp, FiStar, FiArrowRight, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
 const heroSlides = [
@@ -45,7 +45,7 @@ function useScrollReveal(threshold = 0.15) {
 }
 
 export default function HomePage() {
-  const { isAuthenticated } = useSelector(s => s.auth);
+  const { isAuthenticated } = useAuthStore();
   const [trending, setTrending] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [categories, setCategories] = useState([]);

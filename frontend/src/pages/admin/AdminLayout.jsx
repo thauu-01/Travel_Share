@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAuthStore } from '../../store/useAuthStore';
 import {
   FiUsers, FiFileText, FiMapPin, FiTag,
   FiMessageSquare, FiAlertTriangle, FiBell, FiHeadphones,
@@ -8,7 +8,6 @@ import {
   FiShield, FiActivity, FiCreditCard
 } from 'react-icons/fi';
 import { adminAPI } from '../../services/api';
-import { logout } from '../../store/authSlice';
 
 const MENU = [
   { path: '/admin',               label: 'Dashboard',     icon: FiBarChart2,     color: 'text-blue-400',   dot: 'bg-blue-500' },
@@ -37,8 +36,7 @@ const PAGE_META = [
 ];
 
 export default function AdminLayout() {
-  const { user, isAuthenticated } = useSelector(s => s.auth);
-  const dispatch = useDispatch();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -149,7 +147,7 @@ export default function AdminLayout() {
             {!collapsed && 'Trang chủ'}
           </button>
           <button
-            onClick={() => { dispatch(logout()); navigate('/'); }}
+            onClick={() => { logout(); navigate('/'); }}
             title={collapsed ? 'Đăng xuất' : ''}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all border-none bg-transparent cursor-pointer text-sm font-medium ${collapsed ? 'justify-center w-11' : 'w-full'}`}
           >

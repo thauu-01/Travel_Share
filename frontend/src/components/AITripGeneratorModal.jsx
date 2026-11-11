@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useAuthStore } from '../store/useAuthStore';
 import { tripAPI, paymentAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { FiX, FiZap, FiMapPin, FiCalendar, FiDollarSign, FiHeart, FiLock, FiStar } from 'react-icons/fi';
@@ -26,7 +26,7 @@ const BUDGETS = [
 ];
 
 export default function AITripGeneratorModal({ onClose, onTripCreated }) {
-  const { user } = useSelector(s => s.auth);
+  const { user } = useAuthStore();
   const aiCredits = user?.ai_credits ?? 0;
   const isVIP = user?.is_vip ?? false;
   const hasCredits = isVIP || aiCredits > 0;

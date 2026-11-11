@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useAuthStore } from '../store/useAuthStore';
 import { tripAPI, paymentAPI, authAPI } from '../services/api';
-import { updateUser } from '../store/authSlice';
 import toast from 'react-hot-toast';
 import {
   FiZap, FiMapPin, FiCalendar, FiDollarSign, FiHeart, FiLock,
@@ -43,8 +42,7 @@ const BUDGETS = [
 
 export default function AITripPlannerPage() {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { user, isAuthenticated } = useSelector(s => s.auth);
+  const { user, isAuthenticated, updateUser } = useAuthStore();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -56,7 +54,7 @@ export default function AITripPlannerPage() {
     authAPI.getMe()
       .then(res => {
         if (res.data?.data) {
-          dispatch(updateUser(res.data.data));
+          updateUser(res.data.data);
         }
       })
       .catch(() => {});

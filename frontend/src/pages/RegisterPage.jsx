@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { loginSuccess } from '../store/authSlice';
+import { useAuthStore } from '../store/useAuthStore';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
@@ -11,7 +10,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
+  const { loginSuccess } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -21,7 +20,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const res = await authAPI.register({ full_name: form.full_name, email: form.email, password: form.password });
-      dispatch(loginSuccess(res.data.data));
+      loginSuccess(res.data.data);
       toast.success('Đăng ký thành công!');
       navigate('/');
     } catch (err) {

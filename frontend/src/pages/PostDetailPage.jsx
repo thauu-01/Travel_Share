@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAuthStore } from '../store/useAuthStore';
 import { postAPI, commentAPI, reportAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { FiHeart, FiMessageCircle, FiEye, FiShare2, FiMapPin, FiSend, FiFlag, FiX, FiChevronLeft, FiChevronRight, FiZoomIn, FiCalendar } from 'react-icons/fi';
@@ -246,7 +246,7 @@ function Lightbox({ images, current, onClose, onPrev, onNext, total, setCurrent 
 
 export default function PostDetailPage() {
   const { id } = useParams();
-  const { isAuthenticated, user } = useSelector(s => s.auth);
+  const { isAuthenticated, user } = useAuthStore();
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');

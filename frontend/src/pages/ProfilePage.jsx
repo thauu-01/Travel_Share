@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useAuthStore } from '../store/useAuthStore';
 import { userAPI } from '../services/api';
-import { updateUser } from '../store/authSlice';
 import PostCard from '../components/PostCard';
 import toast from 'react-hot-toast';
 import { FiEdit2, FiCamera, FiImage, FiHeart } from 'react-icons/fi';
 
 export default function ProfilePage() {
   const { id } = useParams();
-  const { user: currentUser, isAuthenticated } = useSelector(s => s.auth);
+  const { user: currentUser, isAuthenticated, updateUser } = useAuthStore();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   
   const targetId = id || currentUser?.id;
   const isOwner = String(currentUser?.id) === String(targetId);
@@ -67,7 +65,7 @@ export default function ProfilePage() {
       fd.append('bio', form.bio);
       const res = await userAPI.updateProfile(fd);
       setProfile(prev => ({ ...prev, ...res.data.data }));
-      dispatch(updateUser(res.data.data));
+      updateUser(res.data.data);
       setEditing(false);
       toast.success('Cập nhật thành công!');
     } catch (err) { toast.error('Lỗi cập nhật'); }
@@ -82,7 +80,7 @@ export default function ProfilePage() {
     try {
       const res = await userAPI.updateProfile(fd);
       setProfile(prev => ({ ...prev, avatar_url: res.data.data.avatar_url }));
-      dispatch(updateUser({ avatar_url: res.data.data.avatar_url }));
+      updateUser({ avatar_url: res.data.data.avatar_url });
       toast.success('Cập nhật avatar thành công!');
     } catch (err) { toast.error('Lỗi upload avatar'); }
   };
