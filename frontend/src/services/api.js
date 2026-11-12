@@ -154,8 +154,8 @@ export const categoryAPI = {
 
 export const notificationAPI = {
   getAll: () => API.get('/notifications'),
-  markRead: (id) => API.put(`/notifications/${id}/read`),
-  markAllRead: () => API.put('/notifications/read-all'),
+  markRead: (id) => API.patch(`/notifications/${id}/read`),
+  markAllRead: () => API.patch('/notifications/read-all'),
 };
 
 export const recommendationAPI = {

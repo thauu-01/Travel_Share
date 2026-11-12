@@ -104,4 +104,23 @@ describe('Integration: API Health & Router Test Suite', () => {
     const res = await invokeExpress({ method: 'POST', url: '/api/chat/admin/3/send' });
     assert.strictEqual(res.statusCode, 401);
   });
+
+  it('User endpoint /api/notifications tồn tại (trả về 401 khi chưa đăng nhập)', async () => {
+    const res = await invokeExpress({ method: 'GET', url: '/api/notifications' });
+    assert.strictEqual(res.statusCode, 401);
+  });
+
+  it('User endpoint /api/notifications/read-all hỗ trợ cả PUT và PATCH (trả về 401 khi chưa đăng nhập)', async () => {
+    const resPut = await invokeExpress({ method: 'PUT', url: '/api/notifications/read-all' });
+    assert.strictEqual(resPut.statusCode, 401);
+    const resPatch = await invokeExpress({ method: 'PATCH', url: '/api/notifications/read-all' });
+    assert.strictEqual(resPatch.statusCode, 401);
+  });
+
+  it('User endpoint /api/notifications/:id/read hỗ trợ cả PUT và PATCH (trả về 401 khi chưa đăng nhập)', async () => {
+    const resPut = await invokeExpress({ method: 'PUT', url: '/api/notifications/1/read' });
+    assert.strictEqual(resPut.statusCode, 401);
+    const resPatch = await invokeExpress({ method: 'PATCH', url: '/api/notifications/1/read' });
+    assert.strictEqual(resPatch.statusCode, 401);
+  });
 });

@@ -7,9 +7,11 @@ import { authenticate, requireAdmin } from '../middlewares/auth.middleware.js';
 // Admin broadcast route
 router.post('/broadcast', authenticate, requireAdmin, adminController.broadcastNotification);
 
-// User notification routes
+// User notification routes (support both PUT and PATCH)
 router.get('/', authenticate, notificationController.getAll);
+router.put('/read-all', authenticate, notificationController.markAllRead);
 router.patch('/read-all', authenticate, notificationController.markAllRead);
+router.put('/:id/read', authenticate, notificationController.markAsRead);
 router.patch('/:id/read', authenticate, notificationController.markAsRead);
 
 export default router;
