@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiImage, FiSend, FiSave, FiMapPin, FiPlus, FiX, FiCalendar, FiStar, FiArrowLeft, FiAlertCircle } from 'react-icons/fi';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
@@ -26,19 +26,34 @@ function MapController({ center }) {
   return null;
 }
 
+function MapEvents({ onMapClick }) {
+  useMapEvents({
+    click(e) {
+      if (onMapClick) onMapClick(e.latlng);
+    }
+  });
+  return null;
+}
+
+const DEFAULT_INITIAL_VALUES = {
+  title: '',
+  content: '',
+  place_id: '',
+  trip_id: '',
+  rating: 5,
+  status: 'published'
+};
+const DEFAULT_IMAGES = [];
+const DEFAULT_PLACES = [];
+const DEFAULT_CATEGORIES = [];
+const DEFAULT_TRIPS = [];
+
 export function PostForm({
-  initialValues = {
-    title: '',
-    content: '',
-    place_id: '',
-    trip_id: '',
-    rating: 5,
-    status: 'published'
-  },
-  existingImages = [],
-  places = [],
-  categories = [],
-  trips = [],
+  initialValues = DEFAULT_INITIAL_VALUES,
+  existingImages = DEFAULT_IMAGES,
+  places = DEFAULT_PLACES,
+  categories = DEFAULT_CATEGORIES,
+  trips = DEFAULT_TRIPS,
   onSubmit,
   isEdit = false,
   submitting = false,
@@ -74,15 +89,21 @@ export function PostForm({
   const [mapCenter, setMapCenter] = useState([16.0544, 108.2472]);
 
   useEffect(() => {
-    setForm(initialValues);
-  }, [initialValues]);
+    if (isEdit && initialValues) {
+      setForm(initialValues);
+    }
+  }, [initialValues, isEdit]);
 
   useEffect(() => {
-    setCurrentExistingImages(existingImages);
-  }, [existingImages]);
+    if (isEdit && existingImages && existingImages.length > 0) {
+      setCurrentExistingImages(existingImages);
+    }
+  }, [existingImages, isEdit]);
 
   useEffect(() => {
-    setLocalPlaces(places);
+    if (places && places.length > 0) {
+      setLocalPlaces(places);
+    }
   }, [places]);
 
   // Geocoding Nominatim autocomplete search
@@ -101,17 +122,30 @@ export function PostForm({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const extractProvince = (address) => {
-    if (!address) return '';
-    return address.city || address.state || address.province || address.town || address.county || '';
+  const extractProvince = (address, displayName = '') => {
+    if (address) {
+      const p = address.state || address.province || address.city || address.municipality || address.town || address.county || address.city_district || '';
+      if (p) return p.replace(/^tỉnh\s+/i, '').replace(/^thành phố\s+/i, '').trim();
+    }
+    if (displayName) {
+      const cleaned = displayName.replace(/,\s*\d{5,6}\s*(,|$)/g, '$1').replace(/,\s*Việt Nam\s*$/i, '').trim();
+      const parts = cleaned.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        return parts[parts.length - 1].replace(/^tỉnh\s+/i, '').replace(/^thành phố\s+/i, '').trim();
+      }
+    }
+    return '';
   };
 
   const handleSelectSuggestion = (item) => {
     const lat = parseFloat(item.lat);
     const lon = parseFloat(item.lon);
-    const province = extractProvince(item.address);
-    const displayName = item.display_name;
-    const name = item.name || displayName.split(',')[0];
+    const displayName = item.display_name || '';
+    const name = item.name || displayName.split(',')[0]?.trim() || '';
+    let province = extractProvince(item.address, displayName);
+    if (!province) {
+      province = name.replace(/^tỉnh\s+/i, '').replace(/^thành phố\s+/i, '').trim() || name;
+    }
 
     setNewPlace(prev => ({
       ...prev,
@@ -126,6 +160,33 @@ export function PostForm({
     setSuggestions([]);
     setShowSuggestions(false);
     setSearchQuery(name);
+  };
+
+  const handleMapClick = (latlng) => {
+    const lat = latlng.lat.toFixed(6);
+    const lon = latlng.lng.toFixed(6);
+    setMapCenter([latlng.lat, latlng.lng]);
+    setNewPlace(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lon
+    }));
+
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`)
+      .then(r => r.json())
+      .then(data => {
+        if (data) {
+          const prov = extractProvince(data.address, data.display_name);
+          const name = data.name || data.display_name?.split(',')[0]?.trim() || '';
+          setNewPlace(prev => ({
+            ...prev,
+            name: prev.name || name || 'Địa điểm mới',
+            province: prev.province || prov || 'Việt Nam',
+            address: data.display_name || prev.address
+          }));
+        }
+      })
+      .catch(() => {});
   };
 
   // Image handlers
@@ -166,13 +227,29 @@ export function PostForm({
   // Handle create new place inline
   const handleCreatePlace = async (e) => {
     e.preventDefault();
-    if (!newPlace.name.trim() || !newPlace.province.trim()) {
-      toast.error('Vui lòng nhập tên địa điểm và tỉnh/thành');
+    const placeName = (newPlace.name || searchQuery || '').trim();
+    let placeProvince = (newPlace.province || '').trim();
+
+    if (!placeName) {
+      toast.error('Vui lòng nhập tên địa điểm');
       return;
     }
+
+    // Tự động suy luận tỉnh/thành nếu người dùng chưa nhập
+    if (!placeProvince) {
+      placeProvince = extractProvince(null, newPlace.address || searchQuery) || placeName;
+      setNewPlace(prev => ({ ...prev, province: placeProvince }));
+    }
+
     setCreatingPlace(true);
     try {
-      const res = await placeAPI.create(newPlace);
+      const payload = {
+        ...newPlace,
+        name: placeName,
+        province: placeProvince,
+        category_id: newPlace.category_id || (categories[0]?.id || null)
+      };
+      const res = await placeAPI.create(payload);
       const createdPlace = res.data.data;
       toast.success(`Đã thêm địa điểm "${createdPlace.name}"!`);
       setLocalPlaces(prev => [createdPlace, ...prev]);
@@ -256,8 +333,14 @@ export function PostForm({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => {
-                      setSearchQuery(e.target.value);
+                      const val = e.target.value;
+                      setSearchQuery(val);
                       setShowSuggestions(true);
+                      setNewPlace(prev => ({
+                        ...prev,
+                        name: prev.name || val,
+                        province: prev.province || val
+                      }));
                     }}
                     onFocus={() => setShowSuggestions(true)}
                     placeholder="Tìm kiếm địa điểm trên bản đồ..."
@@ -280,20 +363,26 @@ export function PostForm({
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Tên địa điểm *"
-                    value={newPlace.name}
-                    onChange={(e) => setNewPlace(prev => ({ ...prev, name: e.target.value }))}
-                    className="px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Tỉnh / Thành phố *"
-                    value={newPlace.province}
-                    onChange={(e) => setNewPlace(prev => ({ ...prev, province: e.target.value }))}
-                    className="px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white"
-                  />
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tên địa điểm *</label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: Bãi Sau"
+                      value={newPlace.name}
+                      onChange={(e) => setNewPlace(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tỉnh / Thành phố *</label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: Vũng Tàu"
+                      value={newPlace.province}
+                      onChange={(e) => setNewPlace(prev => ({ ...prev, province: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white"
+                    />
+                  </div>
                 </div>
 
                 <div className="h-36 rounded-lg overflow-hidden border border-slate-200 relative z-10">
@@ -301,6 +390,7 @@ export function PostForm({
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <Marker position={mapCenter} />
                     <MapController center={mapCenter} />
+                    <MapEvents onMapClick={handleMapClick} />
                   </MapContainer>
                 </div>
 

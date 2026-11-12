@@ -18,7 +18,11 @@ class PlaceService {
   }
 
   async createPlace(userId, { name, description, province, address, latitude, longitude, category_id }, file = null) {
-    const slug = slugify(name);
+    let slug = slugify(name);
+    const existing = await placeRepository.findOne({ slug });
+    if (existing) {
+      slug = `${slug}-${Date.now().toString(36)}`;
+    }
 
     const place = await placeRepository.create({
       name: name.trim(),
