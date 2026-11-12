@@ -28,6 +28,14 @@ export function Button({
     lg: 'text-base px-6 py-3 gap-2.5'
   };
 
+  const renderIcon = () => {
+    if (!Icon) return null;
+    if (React.isValidElement(Icon)) {
+      return Icon;
+    }
+    return <Icon className="text-lg" />;
+  };
+
   return (
     <button
       type={type}
@@ -41,9 +49,9 @@ export function Button({
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
         </svg>
-      ) : Icon ? (
-        <Icon className="text-lg" />
-      ) : null}
+      ) : (
+        renderIcon()
+      )}
       {children}
     </button>
   );

@@ -20,7 +20,7 @@ export function TripHeader({
       <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm text-center">
         <h2 className="text-xl font-bold text-slate-800 mb-2">Chưa chọn lịch trình nào</h2>
         <p className="text-slate-500 text-sm mb-4">Hãy tạo một kế hoạch du lịch mới hoặc chọn lịch trình từ danh sách</p>
-        <Button variant="primary" onClick={onOpenCreate} icon={<FiPlus />}>
+        <Button variant="primary" onClick={onOpenCreate} icon={FiPlus}>
           Tạo lịch trình ngay
         </Button>
       </div>
@@ -76,7 +76,7 @@ export function TripHeader({
             size="sm"
             variant="primary"
             onClick={onOpenCreate}
-            icon={<FiPlus />}
+            icon={FiPlus}
           >
             Tạo mới
           </Button>
@@ -108,7 +108,7 @@ export function TripHeader({
             variant="outline"
             loading={addingDay}
             onClick={onAddDay}
-            icon={<FiPlus />}
+            icon={FiPlus}
           >
             Thêm ngày tiếp theo
           </Button>

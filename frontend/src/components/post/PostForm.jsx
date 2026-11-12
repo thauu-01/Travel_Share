@@ -485,7 +485,7 @@ export function PostForm({
             type="button"
             variant="ghost"
             onClick={onCancel}
-            icon={<FiArrowLeft />}
+            icon={FiArrowLeft}
           >
             Hủy / Quay lại
           </Button>
@@ -494,7 +494,7 @@ export function PostForm({
           type="submit"
           variant="primary"
           loading={submitting}
-          icon={isEdit ? <FiSave /> : <FiSend />}
+          icon={isEdit ? FiSave : FiSend}
         >
           {isEdit ? 'Lưu thay đổi' : 'Đăng bài viết ngay'}
         </Button>

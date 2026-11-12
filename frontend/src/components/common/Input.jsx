@@ -21,7 +21,7 @@ export function Input({
       <div className="relative rounded-xl shadow-sm">
         {Icon && (
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            <Icon className="text-lg" />
+            {React.isValidElement(Icon) ? Icon : <Icon className="text-lg" />}
           </div>
         )}
         <input
