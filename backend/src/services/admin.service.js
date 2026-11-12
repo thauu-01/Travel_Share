@@ -4,7 +4,7 @@ import placeRepository from '../repositories/place.repository.js';
 import reportRepository from '../repositories/report.repository.js';
 import paymentRepository from '../repositories/payment.repository.js';
 import chatRepository from '../repositories/chat.repository.js';
-import { User, Post, Place, Report, ChatMessage } from '../models/index.js';
+import { User, Post, Place, Report, ChatMessage, Comment, Notification, Payment } from '../models/index.js';
 import { slugify } from '../utils/slug.util.js';
 import ApiError from '../utils/apiError.js';
 
@@ -133,31 +133,198 @@ class AdminService {
     });
   }
 
-  async getTransactions(queryParams) {
-    return await paymentRepository.getAllPaymentsWithUsers(queryParams);
+  // Transactions management for Admin
+  async getTransactions(queryParams = {}) {
+    const { page = 1, limit = 12, status, search } = queryParams;
+    const limitNum = parseInt(limit) || 12;
+    const skipNum = (parseInt(page) - 1) * limitNum;
+
+    const where = {};
+    if (status) where.status = status;
+
+    if (search) {
+      const matchUsers = await User.find({
+        $or: [
+          { email: new RegExp(search, 'i') },
+          { full_name: new RegExp(search, 'i') }
+        ]
+      }).select('_id');
+      where.user_id = { $in: matchUsers.map(u => u._id) };
+    }
+
+    const total = await Payment.countDocuments(where);
+    const payments = await Payment.find(where)
+      .populate('user_id', 'id full_name email avatar_url')
+      .sort({ createdAt: -1 })
+      .limit(limitNum)
+      .skip(skipNum)
+      .lean();
+
+    const result = payments.map(p => ({
+      ...p,
+      user: p.user_id
+    }));
+
+    const stats = await Payment.aggregate([
+      { $match: { status: 'success' } },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$amount' },
+          totalCredits: { $sum: '$credits_purchased' },
+          totalOrders: { $sum: 1 }
+        }
+      }
+    ]);
+
+    return {
+      payments: result,
+      pagination: {
+        total,
+        page: parseInt(page) || 1,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum) || 1
+      },
+      stats: stats[0] || { totalRevenue: 0, totalCredits: 0, totalOrders: 0 }
+    };
   }
 
+  // Broadcast notification to all active users
+  async broadcastNotification(adminId, title, message, io = null) {
+    if (!title || !message) {
+      throw ApiError.badRequest('Tiêu đề và nội dung là bắt buộc');
+    }
+    const users = await User.find({ is_active: true }).select('_id');
+    const fullMessage = `${title}: ${message}`;
+    const senderAdmin = await User.findById(adminId).select('id full_name avatar_url');
+
+    for (const targetUser of users) {
+      const notif = await Notification.create({
+        user_id: targetUser._id,
+        from_user_id: adminId,
+        type: 'system',
+        message: fullMessage
+      });
+
+      if (io) {
+        const notifObj = notif.toObject ? notif.toObject() : { ...notif._doc };
+        notifObj.fromUser = senderAdmin;
+        io.to(`user_${targetUser._id}`).emit('notification', notifObj);
+      }
+    }
+
+    return { message: 'Đã phát sóng thông báo hệ thống đến tất cả người dùng hoạt động' };
+  }
+
+  // Support Chat Threads
   async getSupportConversations() {
-    return await chatRepository.getSupportConversations();
+    const usersWithChats = await ChatMessage.aggregate([
+      { $group: { _id: '$user_id', lastMsgTime: { $max: '$created_at' } } },
+      { $sort: { lastMsgTime: -1 } }
+    ]);
+
+    const chats = await Promise.all(usersWithChats.map(async (chat) => {
+      const userId = chat._id;
+      const user = await User.findById(userId).select('id full_name avatar_url email');
+      const lastMessage = await ChatMessage.findOne({ user_id: userId }).sort({ created_at: -1 });
+      const unreadCount = await ChatMessage.countDocuments({ user_id: userId, sender_type: 'user', is_read_by_admin: false });
+
+      return {
+        user,
+        lastMessage,
+        unreadCount
+      };
+    }));
+
+    return chats;
   }
 
+  // Get chat history with specific user
   async getSupportMessages(userId) {
-    return await chatRepository.getUserMessages(userId);
+    const uid = parseInt(userId);
+    const messages = await ChatMessage.find({ user_id: uid }).sort({ created_at: 1 });
+    await ChatMessage.updateMany({ user_id: uid, sender_type: 'user' }, { is_read_by_admin: true });
+    return messages;
   }
 
+  // Send admin message
   async sendSupportReply(targetUserId, adminId, message, io = null) {
-    const msg = await chatRepository.create({
-      user_id: targetUserId,
-      sender: 'admin',
-      message: message.trim(),
-      is_support: true
+    const uid = parseInt(targetUserId);
+    if (!message || !message.trim()) {
+      throw ApiError.badRequest('Nội dung tin nhắn trống');
+    }
+
+    const chatMessage = await ChatMessage.create({
+      user_id: uid,
+      sender_type: 'admin',
+      message: message.trim()
     });
 
     if (io) {
-      io.to(`user_${targetUserId}`).emit('support_reply', msg);
+      io.to(`user_${uid}`).emit('new_admin_message', chatMessage);
+      io.to('admin_support').emit('new_user_message', {
+        userId: uid,
+        message: chatMessage
+      });
     }
 
-    return msg;
+    return chatMessage;
+  }
+
+  // Comments management for Admin
+  async getComments(queryParams = {}) {
+    const { page = 1, limit = 20, search } = queryParams;
+    const limitNum = parseInt(limit) || 20;
+    const skipNum = (parseInt(page) - 1) * limitNum;
+
+    const where = {};
+    if (search) {
+      where.content = { $regex: search, $options: 'i' };
+    }
+
+    const count = await Comment.countDocuments(where);
+    const comments = await Comment.find(where)
+      .populate('user', 'id full_name avatar_url')
+      .populate('post', 'id title')
+      .sort({ created_at: -1 })
+      .limit(limitNum)
+      .skip(skipNum);
+
+    return {
+      comments,
+      pagination: {
+        total: count,
+        page: parseInt(page) || 1,
+        limit: limitNum,
+        totalPages: Math.ceil(count / limitNum) || 1
+      }
+    };
+  }
+
+  async deleteComment(commentId) {
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      throw ApiError.notFound('Không tìm thấy bình luận');
+    }
+    await Comment.deleteMany({ parent_id: comment._id });
+    await comment.deleteOne();
+    return { message: 'Xóa bình luận thành công' };
+  }
+
+  // Places management for Admin
+  async getPlaces(queryParams = {}) {
+    const { search } = queryParams;
+    const where = {};
+    if (search) {
+      where.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { province: { $regex: search, $options: 'i' } }
+      ];
+    }
+    const places = await Place.find(where)
+      .populate('category', 'id name icon')
+      .sort({ name: 1 });
+    return places;
   }
 }
 
