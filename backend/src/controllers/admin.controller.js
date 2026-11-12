@@ -88,7 +88,35 @@ class AdminController {
     }
   }
 
+  // Comments
+  async getComments(req, res, next) {
+    try {
+      const result = await adminService.getComments(req.query);
+      return ApiResponse.success(res, result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteComment(req, res, next) {
+    try {
+      const result = await adminService.deleteComment(req.params.id);
+      return ApiResponse.success(res, null, result.message);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   // Places
+  async getPlaces(req, res, next) {
+    try {
+      const places = await adminService.getPlaces(req.query);
+      return ApiResponse.success(res, places);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async createPlace(req, res, next) {
     try {
       const place = await placeService.createPlace(req.user.id, req.body, req.file);
@@ -140,6 +168,22 @@ class AdminController {
     try {
       const report = await reportService.updateReportStatus(req.params.id, req.body);
       return ApiResponse.success(res, report, 'Cập nhật báo cáo thành công');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // Notifications
+  async broadcastNotification(req, res, next) {
+    try {
+      const io = req.app.get('io');
+      const result = await adminService.broadcastNotification(
+        req.user.id,
+        req.body.title,
+        req.body.message,
+        io
+      );
+      return ApiResponse.success(res, null, result.message);
     } catch (err) {
       next(err);
     }
