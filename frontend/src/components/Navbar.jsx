@@ -4,6 +4,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { notificationAPI } from '../services/api';
 import { io } from 'socket.io-client';
 import { FiBell, FiPlus, FiSearch, FiLogOut, FiCompass, FiCalendar, FiUser, FiShield } from 'react-icons/fi';
+import { Modal } from './common/Modal';
+import { Button } from './common/Button';
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -13,6 +15,7 @@ export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -68,16 +71,19 @@ export default function Navbar() {
   };
 
   const handleMarkRead = async (notif) => {
-    // Optimistic update ngay lập tức
+    const notifId = notif.id ?? notif._id;
+    // Đánh dấu đã đọc ngay lập tức trong state
     if (!notif.is_read) {
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
+      setNotifications(prev => prev.map(n => ((n.id ?? n._id) === notifId ? { ...n, is_read: true } : n)));
       setUnreadCount(prev => Math.max(0, prev - 1));
       try {
-        await notificationAPI.markRead(notif.id);
-      } catch { /* ignore */ }
+        await notificationAPI.markRead(notifId);
+      } catch (err) {
+        console.error('Lỗi đánh dấu đã đọc:', err);
+      }
     }
-    // Navigate nếu có bài viết
-    if (notif.post_id) navigate(`/posts/${notif.post_id}`);
+    // Mở modal chi tiết thông báo ở giữa màn hình
+    setSelectedNotif({ ...notif, is_read: true });
     setShowNotif(false);
   };
 
@@ -108,7 +114,8 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-[1000] h-16 flex items-center justify-between px-6 md:px-8 transition-all duration-300 ${
+    <>
+      <nav className={`fixed top-0 left-0 right-0 z-[1000] h-16 flex items-center justify-between px-6 md:px-8 transition-all duration-300 ${
       scrolled
         ? 'bg-white/90 backdrop-blur-xl shadow-sm shadow-blue-900/5 border-b border-slate-100'
         : 'bg-white/70 backdrop-blur-lg border-b border-slate-100/60'
@@ -288,5 +295,86 @@ export default function Navbar() {
         )}
       </div>
     </nav>
+
+    {/* Modal chi tiết thông báo */}
+    <Modal
+        isOpen={!!selectedNotif}
+        onClose={() => setSelectedNotif(null)}
+        title={
+          <div className="flex items-center gap-2 text-slate-800">
+            <span className="text-xl">
+              {selectedNotif?.type === 'system' ? '📢' : selectedNotif?.type === 'like' ? '❤️' : selectedNotif?.type === 'comment' ? '💬' : '🔔'}
+            </span>
+            <span className="font-bold text-base">
+              {selectedNotif?.type === 'system' ? 'Thông báo hệ thống' : 'Chi tiết thông báo'}
+            </span>
+          </div>
+        }
+        maxWidth="max-w-md"
+      >
+        {selectedNotif && (
+          <div className="space-y-4">
+            {/* Người gửi & Thời gian */}
+            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0 shadow-sm">
+                {selectedNotif.fromUser?.avatar_url ? (
+                  <img src={selectedNotif.fromUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : selectedNotif.fromUser?.full_name ? (
+                  selectedNotif.fromUser.full_name[0].toUpperCase()
+                ) : selectedNotif.type === 'system' ? (
+                  '📢'
+                ) : (
+                  '🔔'
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-slate-800 text-sm truncate">
+                  {selectedNotif.fromUser?.full_name || (selectedNotif.type === 'system' ? 'Ban Quản Trị TravelShare' : 'Hệ thống TravelShare')}
+                </div>
+                <div className="text-xs text-slate-400">
+                  {new Date(selectedNotif.created_at).toLocaleString('vi-VN')} ({timeAgo(selectedNotif.created_at)})
+                </div>
+              </div>
+            </div>
+
+            {/* Nội dung thông báo */}
+            <div className="p-4 bg-white rounded-2xl border border-slate-200/80 text-sm text-slate-700 leading-relaxed whitespace-pre-line shadow-xs">
+              {selectedNotif.message}
+            </div>
+
+            {/* Thông tin bài viết liên quan nếu có */}
+            {selectedNotif.post && (
+              <div className="text-xs text-blue-600 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                📄 Liên quan đến bài viết: <strong>{selectedNotif.post.title}</strong>
+              </div>
+            )}
+
+            {/* Các nút hành động */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              {selectedNotif.post_id && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    const postId = selectedNotif.post_id;
+                    setSelectedNotif(null);
+                    navigate(`/posts/${postId}`);
+                  }}
+                >
+                  Xem bài viết 👉
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedNotif(null)}
+              >
+                Đóng
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </>
   );
 }

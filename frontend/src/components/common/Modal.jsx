@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FiX } from 'react-icons/fi';
 
 export function Modal({
@@ -22,18 +23,18 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in"
         onClick={onClose}
       />
 
       {/* Modal Dialog */}
       <div className="flex min-h-full items-center justify-center p-4 text-center">
         <div
-          className={`w-full ${maxWidth} transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-2xl transition-all relative animate-scale-up border border-slate-100`}
+          className={`w-full ${maxWidth} transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-2xl transition-all relative z-10 animate-scale-up border border-slate-100 my-8`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -43,7 +44,7 @@ export function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 hover:bg-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <FiX className="text-xl" />
               </button>
@@ -56,6 +57,10 @@ export function Modal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }
 
 export default Modal;
