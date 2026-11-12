@@ -251,7 +251,7 @@ export function PostForm({
             ) : (
               <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-100 space-y-3">
                 <div className="text-xs font-medium text-blue-800">Tạo địa điểm nhanh từ bản đồ:</div>
-                <div className="relative">
+                <div className="relative z-30">
                   <input
                     type="text"
                     value={searchQuery}
@@ -264,7 +264,7 @@ export function PostForm({
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white"
                   />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-[1001] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
                       {suggestions.map((item, idx) => (
                         <div
                           key={idx}
@@ -296,7 +296,7 @@ export function PostForm({
                   />
                 </div>
 
-                <div className="h-36 rounded-lg overflow-hidden border border-slate-200">
+                <div className="h-36 rounded-lg overflow-hidden border border-slate-200 relative z-10">
                   <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <Marker position={mapCenter} />

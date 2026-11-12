@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { adminAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -54,7 +54,9 @@ export default function AdminPlaces() {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [mapCenter, setMapCenter] = useState([10.7769, 106.7009]);
+  const searchContainerRef = useRef(null);
 
   useEffect(() => {
     fetchPlacesAndCategories();
@@ -91,19 +93,44 @@ export default function AdminPlaces() {
     }
   };
 
-  // Nominatim Autocomplete Live Search
+  // Click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const triggerSearch = async (query) => {
+    if (!query || query.trim().length < 2) {
+      setSuggestions([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query.trim())}&countrycodes=vn&addressdetails=1&limit=6`);
+      const data = await res.json();
+      setSuggestions(data || []);
+    } catch (err) {
+      console.error('Nominatim search error:', err);
+      setSuggestions([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   useEffect(() => {
     if (!searchQuery || searchQuery.trim().length < 2) {
       setSuggestions([]);
+      setIsSearching(false);
       return;
     }
     const timer = setTimeout(() => {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=vn&addressdetails=1&limit=5`)
-        .then(res => res.json())
-        .then(data => {
-          setSuggestions(data || []);
-        })
-        .catch(() => setSuggestions([]));
+      triggerSearch(searchQuery);
     }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -338,35 +365,85 @@ export default function AdminPlaces() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Geocoding Search */}
-              <div className="relative">
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
-                  🔍 Bản đồ & Tìm kiếm địa chỉ tự động
-                </label>
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm địa điểm trên bản đồ..."
-                  value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
-                  onFocus={() => setShowSuggestions(true)}
-                  className="w-full px-4 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-                {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-44 overflow-y-auto mt-1">
-                    {suggestions.map((item, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => handleSelectSuggestion(item)}
-                        className="px-3 py-2 cursor-pointer border-b border-slate-100 hover:bg-indigo-50 text-xs text-slate-700 transition-colors"
-                      >
-                        {item.display_name}
+              <div className="relative z-30" ref={searchContainerRef}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <FiSearch className="text-indigo-600" /> Bản đồ & Tìm kiếm địa chỉ tự động
+                  </label>
+                  {isSearching && (
+                    <span className="text-[11px] font-medium text-indigo-600 flex items-center gap-1 animate-pulse">
+                      <span className="w-2.5 h-2.5 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
+                      Đang tìm...
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Gõ tên địa điểm (ví dụ: côn đảo, đà nẵng, bến thành...)"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        triggerSearch(searchQuery);
+                        setShowSuggestions(true);
+                      }
+                    }}
+                    className="w-full pl-10 pr-9 py-2.5 text-sm font-medium text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                  />
+                  <FiSearch className="absolute left-3.5 top-3 text-slate-400" size={16} />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(''); setSuggestions([]); }}
+                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                      title="Xóa tìm kiếm"
+                    >
+                      <FiX size={15} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Suggestions Dropdown with High Z-Index so it overlays Leaflet map */}
+                {showSuggestions && searchQuery.trim().length >= 2 && (
+                  <div className="absolute top-full left-0 right-0 bg-white border border-indigo-200 rounded-2xl shadow-2xl z-[1001] max-h-56 overflow-y-auto mt-1.5 p-1.5">
+                    {suggestions.length > 0 ? (
+                      suggestions.map((item, idx) => {
+                        const parts = (item.display_name || '').split(',').map(s => s.trim()).filter(Boolean);
+                        const primaryName = item.name || parts[0] || item.display_name;
+                        const secondaryText = parts.slice(1).join(', ') || item.display_name;
+
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectSuggestion(item)}
+                            className="px-3.5 py-2.5 cursor-pointer rounded-xl hover:bg-indigo-50 transition-colors border-b border-slate-50 last:border-0 flex items-start gap-2.5"
+                          >
+                            <FiMapPin className="text-indigo-600 shrink-0 mt-0.5" size={15} />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-slate-900 truncate">{primaryName}</div>
+                              <div className="text-[11px] text-slate-500 truncate mt-0.5">{secondaryText}</div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : !isSearching ? (
+                      <div className="px-4 py-3 text-center text-xs text-slate-500">
+                        Không tìm thấy gợi ý nào cho &quot;<strong>{searchQuery}</strong>&quot;.
                       </div>
-                    ))}
+                    ) : null}
                   </div>
                 )}
               </div>
 
-              {/* Leaflet map inside Modal */}
-              <div className="h-44 w-full rounded-2xl overflow-hidden border border-slate-200">
+              {/* Leaflet map inside Modal - Lower Z-Index */}
+              <div className="h-44 w-full rounded-2xl overflow-hidden border border-slate-200 relative z-10">
                 <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   <Marker
