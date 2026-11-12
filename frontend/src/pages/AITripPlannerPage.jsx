@@ -58,7 +58,7 @@ export default function AITripPlannerPage() {
         }
       })
       .catch(() => {});
-  }, [isAuthenticated, navigate, dispatch]);
+  }, [isAuthenticated, navigate, updateUser]);
 
   const aiCredits = user?.ai_credits ?? 0;
   const isVIP = user?.is_vip ?? false;
