@@ -69,4 +69,39 @@ describe('Integration: API Health & Router Test Suite', () => {
     assert.ok(json);
     assert.strictEqual(json.status, 'running');
   });
+
+  it('Admin endpoint /api/comments/admin/all tồn tại (trả về 401 khi chưa đăng nhập thay vì 404)', async () => {
+    const res = await invokeExpress({ method: 'GET', url: '/api/comments/admin/all' });
+    assert.strictEqual(res.statusCode, 401);
+  });
+
+  it('Admin endpoint /api/places/admin/list tồn tại (trả về 401 khi chưa đăng nhập thay vì 404)', async () => {
+    const res = await invokeExpress({ method: 'GET', url: '/api/places/admin/list' });
+    assert.strictEqual(res.statusCode, 401);
+  });
+
+  it('Admin endpoint /api/chat/admin/threads tồn tại (trả về 401 khi chưa đăng nhập thay vì 404)', async () => {
+    const res = await invokeExpress({ method: 'GET', url: '/api/chat/admin/threads' });
+    assert.strictEqual(res.statusCode, 401);
+  });
+
+  it('Admin endpoint /api/payment/admin/transactions tồn tại (trả về 401 khi chưa đăng nhập thay vì 404)', async () => {
+    const res = await invokeExpress({ method: 'GET', url: '/api/payment/admin/transactions' });
+    assert.strictEqual(res.statusCode, 401);
+  });
+
+  it('Admin endpoint /api/notifications/broadcast tồn tại (trả về 401 khi chưa đăng nhập thay vì 404)', async () => {
+    const res = await invokeExpress({ method: 'POST', url: '/api/notifications/broadcast' });
+    assert.strictEqual(res.statusCode, 401);
+  });
+
+  it('Admin endpoint /api/chat/admin/:userId tồn tại (trả về 401 khi chưa đăng nhập thay vì 404)', async () => {
+    const res = await invokeExpress({ method: 'GET', url: '/api/chat/admin/3' });
+    assert.strictEqual(res.statusCode, 401);
+  });
+
+  it('Admin endpoint /api/chat/admin/:userId/send tồn tại (trả về 401 khi chưa đăng nhập thay vì 404)', async () => {
+    const res = await invokeExpress({ method: 'POST', url: '/api/chat/admin/3/send' });
+    assert.strictEqual(res.statusCode, 401);
+  });
 });
